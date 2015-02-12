@@ -1,53 +1,73 @@
-import networkx as nx
 from heapq import *
 from sys import argv
-    
+
+import networkx as nx
+
+
 def main():
-        G = nx.read_gml(argv[1])
-        
-        terms = [i for i,d in G.nodes(data=True) if d['T']]
-        
-        edges = []
+  print('Reading graph...')
+  G = nx.read_gml(argv[1])
+  print('Graph contains', G.number_of_nodes(), 'nodes and', G.number_of_edges(), 'edges')
 
-        number_of_components = len(terms)
-        heaps = {}
-        
-        for t in terms:
-                edge = min(G.edges(terms[0], data=True), key = lambda e: e[2]['c'])
-                edges.append(edge)
-                heaps[t] = [(0,t)]
+  # Terminal nodes
+  terms = [n for n, d in G.nodes(data=True) if d['T']]
 
-        for i,t in G.nodes_iter(data=True): 
-            t['c'] = None
-       
-        for t in terms: 
-            G.nodes(data=True)[t][1]['c'] = {'val':t}
+  # Component count, the goal is to reduce this to 1
+  comp_count = len(terms)
 
-        while number_of_components != 1:
-            for i in terms:
-                print ("das: ", i, number_of_components, heaps)
-                if heaps[i] == []:
-                    continue
-                cost,v = heappop(heaps[i])
-                comp = G.nodes(data = True)[v][1]['c']
-                while heaps[i] != [] and comp != None and comp['val'] == i:
-                    cost,v = heappop(heaps[i])
-                if comp == None:
-                    for v1,v2,d in G.edges(v, data=True):
-                        heappush(heaps[i], (d['c'], v2))
-                    G.nodes(data =True)[v][1]['c'] = G.nodes(data = True)[i][1]['c']
-                elif comp['val'] != i:
-                    print("merge")
-                    h1 = heaps[i]
-                    h2 = heaps[comp['val']]
-                    hm = h1 + h2
-                    heapify(hm)
-                    heaps[i] = hm
-                    heaps[comp['val']] = hm
-                    comp['val'] = G.nodes(data = True)[i][1]['c']['val']
-                    number_of_components -= 1
-        
+  # Min-heaps that store the outgoing (unvisited) edges for each component ordered by cost
+  heaps = {}
+
+  for t in terms:
+    e = min(G.edges(t, data=True), key=lambda e: e[2]['c'])
+    heaps[t] = [(e[2]['c'], e[1], e[0])]
+
+  for n, t in G.nodes_iter(data=True):
+    t['c'] = None
+
+  node_data = [d for n, d in G.nodes(data=True)]
+
+  for t in terms:
+    node_data[t]['c'] = {'val': t}
+
+  S = nx.Graph()
+
+  while comp_count != 1:
+    for t in terms:
+      if not heaps[t]:
+        continue
+
+      cur_comp = node_data[t]['c']
+
+      cost, v, u = heappop(heaps[t])
+      comp = node_data[v]['c']
+      while comp is not None and comp['val'] == cur_comp['val'] and heaps[t]:
+        cost, v, u = heappop(heaps[t])
+        comp = node_data[v]['c']
+
+      if comp is None:
+        for v1, v2, d in G.edges(v, data=True):
+          heappush(heaps[t], (d['c'], v2, v1))
+        node_data[v]['c'] = cur_comp
+
+      elif comp['val'] != cur_comp['val']:
+        h1 = heaps[t]
+        h2 = heaps[comp['val']]
+        hm = h1 + h2
+        heapify(hm)
+        heaps[t] = hm
+        heaps[comp['val']] = hm
+        comp['val'] = cur_comp['val']
+        comp_count -= 1
+
+      else:  # comp['val'] == cur_comp['val']
+        continue
+
+      S.add_edge(u, v, {'c': cost})
+
+  print('Solution:', S.edges())
+  print('Total cost:', sum([d['c'] for u, v, d in S.edges(data=True)]))
+
+
 if __name__ == '__main__':
-        main()
-
-
+  main()
