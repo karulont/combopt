@@ -81,12 +81,20 @@ def main():
         D.add(edge_order(e))
     D.remove(f)
 
+  # restore data
+  for n, d in UF.nodes(data=True):
+    d.update(G.node[n])
+  for e in UF.edges():
+    UF[e[0]][e[1]].update(G[e[0]][e[1]])
+
   return UF
 
 
 if __name__ == '__main__':
   UF = main()
   if UF:
-    print("Steiner tree nodes:",UF.nodes())
-    print("Steiner tree edges:",UF.edges())
+    #print("Steiner tree nodes:",UF.nodes())
+    #print("Steiner tree edges:",UF.edges())
     #draw_graph(UF)
+    #nx.write_gml(G, argv[2])
+    nx.write_gml(UF, "result.gml")
