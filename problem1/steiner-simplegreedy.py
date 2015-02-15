@@ -1,9 +1,10 @@
 import networkx as nx
+from gml_read import read_gml2
 from sys import argv
 
 def main():
-  # G = nx.read_gml(argv[1])
-  G = nx.read_gml("steiner-small.gml")
+  # G = read_gml2(argv[1])
+  G = read_gml2("steiner-small.gml")
 	
   T = [] # terminals
   for v,d in G.nodes_iter(data=True):
