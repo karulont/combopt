@@ -38,17 +38,16 @@ def main():
   # G = read_gml2(argv[1])
   G = read_gml2("steiner-slides.gml")
 
-  # Terminals
-  T = [n for n, d in G.nodes(data=True) if d['T']]
-
   D = set() # candidate edge set
+  T = [n for n, d in G.nodes(data=True) if d['T']] # terminals
   for u in T:
     for e in G.edges(u):
       D.add(edge_order(e))
-  print("initial candidate edge set D: " + str(D))
+  #print("initial candidate edge set D: " + str(D))
 
   UF = nx.Graph()
   UF.add_nodes_from(T)
+  cyclic_edges = set() # edges that are known to form a cycle
 
   while not nx.is_connected(UF):
     if len(D) == 0:
@@ -63,30 +62,24 @@ def main():
         min_f = f_cost
         f = f_i
     f = edge_order(f)
-    print("select f: " + str(f) + ", cost: " + str(G.edge[f[0]][f[1]]['c']))
-    #if len(UF.edges()) > 2:
-    #  return
+    #print("select f: " + str(f) + ", cost: " + str(G.edge[f[0]][f[1]]['c']))
 
     UF_f = UF.copy()
     UF_f.add_edge(f[0], f[1])
     if not is_cyclic(UF_f):
       UF = UF_f
-      #draw_graph(UF)
     else:
-      print ("cycle")
-      draw_graph(UF)
+      cyclic_edges.add(f)
 
     # add edges incident on f to D
-    #print("D: " + str(D))
-    print("add to D: "+str(G.edges(f[0]))+", " + str(G.edges(f[1])))
+    #print("add to D: "+str(G.edges(f[0]))+", " + str(G.edges(f[1])))
     for e in G.edges(f[0]):
-      if not UF.has_edge(e[0], e[1]):
+      if not UF.has_edge(e[0], e[1]) and edge_order(e) not in cyclic_edges:
         D.add(edge_order(e))
     for e in G.edges(f[1]):
-      if not UF.has_edge(e[0], e[1]):
+      if not UF.has_edge(e[0], e[1]) and edge_order(e) not in cyclic_edges:
         D.add(edge_order(e))
     D.remove(f)
-    #print("D: " + str(D))
 
   return UF
 
@@ -94,6 +87,6 @@ def main():
 if __name__ == '__main__':
   UF = main()
   if UF:
-    print("UF nodes:",UF.nodes())
-    print("UF edges:",UF.edges())
+    print("Steiner tree nodes:",UF.nodes())
+    print("Steiner tree edges:",UF.edges())
     #draw_graph(UF)
