@@ -1,42 +1,11 @@
 import networkx as nx
-import matplotlib.pyplot as plt
 from gml_read import read_gml2
+from graph_util import edge_order, draw_graph
 from sys import argv
-
-# based on http://www.geeksforgeeks.org/detect-cycle-undirected-graph/
-def is_cyclic(g):
-  def is_cyclic_recurse(start, visited, parent):
-    visited.add(start)
-    for v in g[start]:
-      if v not in visited:
-        if is_cyclic_recurse(v, visited, start):
-          return True
-      elif v != parent:
-        return True
-    return False
-
-  # do DFS, if we reach a visited node, then there is a cycle
-  visited=set()
-  for u in g:
-    if u not in visited:
-      if is_cyclic_recurse(u, visited, None):
-        return True
-  return False
-
-# order edge vertices by id
-def edge_order(e):
-  if e[0] < e[1]:
-    return e
-  return (e[1], e[0])
-
-def draw_graph(g):
-  nx.draw_networkx(g, with_labels = True)
-  plt.draw()
-  plt.show()
 
 def main():
   # G = read_gml2(argv[1])
-  G = read_gml2("steiner-slides.gml")
+  G = read_gml2("steiner-010000")
 
   D = set() # candidate edge set
   T = [n for n, d in G.nodes(data=True) if d['T']] # terminals
@@ -64,21 +33,28 @@ def main():
     f = edge_order(f)
     #print("select f: " + str(f) + ", cost: " + str(G.edge[f[0]][f[1]]['c']))
 
-    UF_f = UF.copy()
-    UF_f.add_edge(f[0], f[1])
-    if not is_cyclic(UF_f):
-      UF = UF_f
-    else:
+    # are the two nodes connected (will we create a cycle?)
+    if (f[0] in UF and f[1] in UF) and nx.has_path(UF, f[0], f[1]):
       cyclic_edges.add(f)
+    else:
+      UF.add_edge(f[0], f[1])
+
+    print(str(UF.number_of_edges()))
+    #if UF.number_of_edges() > 500:
+    #  return
 
     # add edges incident on f to D
     #print("add to D: "+str(G.edges(f[0]))+", " + str(G.edges(f[1])))
     for e in G.edges(f[0]):
-      if not UF.has_edge(e[0], e[1]) and edge_order(e) not in cyclic_edges:
-        D.add(edge_order(e))
+      if not UF.has_edge(e[0], e[1]):
+        e = edge_order(e)
+        if e not in cyclic_edges:
+          D.add(e)
     for e in G.edges(f[1]):
-      if not UF.has_edge(e[0], e[1]) and edge_order(e) not in cyclic_edges:
-        D.add(edge_order(e))
+      if not UF.has_edge(e[0], e[1]):
+        e = edge_order(e)
+        if e not in cyclic_edges:
+          D.add(e)
     D.remove(f)
 
   # restore data
@@ -97,4 +73,4 @@ if __name__ == '__main__':
     #print("Steiner tree edges:",UF.edges())
     #draw_graph(UF)
     #nx.write_gml(G, argv[2])
-    nx.write_gml(UF, "result.gml")
+    nx.write_gml(UF, "result2.gml")
