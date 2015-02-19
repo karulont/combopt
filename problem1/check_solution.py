@@ -17,7 +17,7 @@ for v,d in G.nodes_iter(data=True):
     d['in_H'] = False
 
 for u,d in H.nodes_iter(data=True):
-    v = d['orig']
+    v = u#d['orig']
     if G.node[v]['in_H']:
         print ("Vertex ",v," appears twice in H")
         exit(10)
@@ -26,13 +26,11 @@ for u,d in H.nodes_iter(data=True):
 total_cost = 0
 
 for u1,u2 in H.edges_iter():
-    v1 = H.node[u1]['orig']
-    v2 = H.node[u2]['orig']
-    if not v2 in G[v1]:
-        print ("H has an edge {",v1,",",v2,"} which doesn't appear in G")
+    if not G.has_edge(u1,u2):
+        print ("H has an edge {",u1,",",u2,"} which doesn't appear in G")
         exit(10)
     else:
-        total_cost += G[v1][v2]['c']
+        total_cost += G[u1][u2]['c']
 
 for v,d in G.nodes_iter(data=True):
     if d['T'] and not d['in_H']:
