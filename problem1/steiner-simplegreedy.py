@@ -3,78 +3,52 @@ import networkx as nx
 from gml_read import read_gml2
 from graph_util import edge_order, draw_graph
 from sys import argv
+from UnionFind import UnionFind
 
 def main():
-  # G = read_gml2(argv[1])
-  G = read_gml2(argv[1] if len(argv) > 1 else "steiner-010000")
+  print('Reading graph...')
+  G = read_gml2(argv[1] if len(argv) > 1 else "steiner-010000.gml")
+  print('Graph contains', G.number_of_nodes(), 'nodes and', G.number_of_edges(), 'edges')
+
+  T = [n for n, d in G.nodes_iter(data=True) if d['T']] # terminals
+  print('Number of terms:', len(T))
 
   # candidate edge set D
-  D = {}       # {cost:[edges]} pairs
-  D_costs = [] # min-heap of costs
-  T = [n for n, d in G.nodes_iter(data=True) if d['T']] # terminals
-  for u in T:
-    for e in G.edges_iter(u, data=True):
-      cost = e[2]['c']
-      if cost not in D:
-        D[cost] = []
-        heapq.heappush(D_costs, cost)
-      D[cost].append(edge_order(e))
-  #print("initial candidate edge set D: " + str(D))
+  D = []
+  for t in T:
+    for _, u, d in G.edges_iter(t, data=True):
+      D.append((d['c'], u, t))
+  heapq.heapify(D)
 
-  UF = nx.Graph()
-  UF.add_nodes_from(T)
-  cyclic_edges = set() # edges that are known to form a cycle
+  S = nx.Graph()
+  uf = UnionFind()
+  comp_count = G.number_of_nodes()
 
-  while (UF.number_of_edges() < UF.number_of_nodes() - 1) and not nx.is_connected(UF):
+  while comp_count > 1:
     if not D:
       print("Not sufficiently connected")
       return
 
-    # find cheapest edge f in D
-    f_cost = D_costs[0]
-    f = D[f_cost].pop()
-    if not D[f_cost]:
-      D.pop(f_cost, None)
-      heapq.heappop(D_costs)
-    #print("select f: " + str(f) + ", cost: " + str(G.edge[f[0]][f[1]]['c']))
+    cost, v, u = heapq.heappop(D)
 
-    # are the two nodes connected (will we create a cycle?)
-    if (f[0] in UF and f[1] in UF) and nx.has_path(UF, f[0], f[1]):
-      cyclic_edges.add((f[0], f[1]))
+    if uf[u] == uf[v]:
       continue
-    else:
-      UF.add_edge(f[0], f[1])
 
-    print(str(UF.number_of_edges()))
+    S.add_edge(u, v, {'c': cost})
+    uf.union(u, v)
+    comp_count -= 1
 
-    # add edges incident on f to D
-    for e in G.edges_iter([f[0], f[1]]):
-      if not UF.has_edge(e[0], e[1]):
-        e = edge_order(e)
-        if e not in cyclic_edges:
-          if e[0] == f[0] and e[1] == f[1]: # \ f
-            continue
-          cost = G.edge[e[0]][e[1]]['c']
-          if cost not in D:
-            D[cost] = []
-            heapq.heappush(D_costs, cost)
-          D[cost].append(e)
+    for _, w, d in G.edges_iter(v, data=True):
+      if w != u:
+        heapq.heappush(D, (d['c'], w, v))
 
-  # restore data
-  for n, d in UF.nodes_iter(data=True):
-    d.update(G.node[n])
-  for e in UF.edges_iter():
-    UF[e[0]][e[1]].update(G[e[0]][e[1]])
-
-  return UF
+  #draw_graph(S)
+  print('Total cost:', sum([d['c'] for u, v, d in S.edges_iter(data=True)]))
+  print('Saving graph...')
+  for v, d in S.nodes_iter(data=True):
+    d['orig'] = v
+  nx.write_gml(S, argv[2] if len(argv) > 2 else "solution.gml")
 
 
 if __name__ == '__main__':
-  UF = main()
-  if UF:
-    #print("Steiner tree nodes:",UF.nodes())
-    #print("Steiner tree edges:",UF.edges())
-    #draw_graph(UF)
-    #nx.write_gml(G, argv[2])
-    print('Total cost:', sum([d['c'] for u, v, d in UF.edges_iter(data=True)]))
-    nx.write_gml(UF, argv[2] if len(argv) ==2 else "steiner-010000-result.gml")
+  main()
