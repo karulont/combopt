@@ -1,3 +1,4 @@
+import networkx as nx
 import matplotlib.pyplot as plt
 
 __all__ = ['is_cyclic', 'edge_order', 'draw_graph']
