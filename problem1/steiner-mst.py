@@ -30,8 +30,6 @@ def main():
 
   MST = nx.minimum_spanning_tree(Gr, weight='c')
 
-  print('Total cost:', sum([d['c'] for u, v, d in MST.edges(data=True)]))
-
   # Add edges to Solution
   S = nx.Graph()
   for u,v,d in MST.edges_iter(data = True):
@@ -40,8 +38,8 @@ def main():
           d=G.get_edge_data(p[i],p[i+1])
           S.add_edge(p[i],p[i+1], c=d['c'])
 
-  print('Total cost2:', sum([d['c'] for u,v,d in S.edges_iter(data = True)]))
-  
+  print('Total cost:', sum([d['c'] for u,v,d in S.edges_iter(data = True)]))
+
   print('Saving graph...')
   for v, d in S.nodes_iter(data=True):
     d['orig'] = v
