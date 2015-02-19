@@ -58,7 +58,7 @@ def read_gml2(path):
                 value = float(sym)
             else:
                 value = int(sym)
-            if value != None:
+            if value is not None:
                 #if level not in attribs:
                 #    attribs[level] = {}
                 attribs[level][current_key] = value
