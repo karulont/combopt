@@ -1,7 +1,6 @@
 from heapq import *
 from gml_read import read_gml2
 from sys import argv
-from UnionFind import UnionFind
 
 import networkx as nx
 
