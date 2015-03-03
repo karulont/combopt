@@ -1,3 +1,5 @@
+import networkx as nx
+
 # from read_mcf import read_mcf
 # edges = read_mcf("mcf-20000--flow-20000")
 
@@ -20,3 +22,12 @@ def read_mcf(path):
         edges.append(edge)
     f.close()
     return edges
+
+def read_mcf_nx(path):
+    edges = read_mcf(path)
+    g = nx.DiGraph()
+    for v1,v2,attrs in edges:
+        g.add_edge(v1,v2,attrs)
+        g.node[v1]['label'] = v1
+        g.node[v2]['label'] = v2
+    return g
