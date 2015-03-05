@@ -4,12 +4,18 @@ import networkx as nx
 import sys
 
 def main():
+	if (len(sys.argv) < 2):
+		print('Usage:', sys.argv[0], '<input file> <output file>')
+		return
+
 	print('Reading input...')
 	times, arcs = read_instance_from_file(sys.argv[1])
-	#print(times, arcs)
+	n = len(times)
+	print('Number of tasks:', n)
+	print('Number of dependencies:', len(arcs))
 	
 	print('Solving...')
-	n = len(times)
+	print('Doing topological sort...')
 	g = nx.DiGraph()
 	for i in range(n):
 		g.add_node(i)
@@ -17,15 +23,14 @@ def main():
 		g.add_edge(arc[0], arc[1])
 	
 	order = nx.topological_sort(g)
-	#print(order)
 	
+	print('Assigning start times...')
 	start = [0] * n
 	end = 0
 	for u in order:
 		end = max(end, start[u] + times[u])
-		for v, w in arcs:
-			if v == u:
-				start[w] = max(start[w], start[u] + times[u])
+		for v in g.neighbors_iter(u):
+			start[v] = max(start[v], start[u] + times[u])
 	print('Total time to complete all tasks:', end)
 	
 	print('Saving solution...')
