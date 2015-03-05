@@ -1,6 +1,7 @@
 #/usr/bin/python3
 import json
 import random
+import sys
 
 ####################################################################################################
 
@@ -72,4 +73,5 @@ def generate_some_random_instances():
     (t,p) = random_instance(6000,predprob=11./6000)
     write_instance_to_file("rnd-6000.sch",t,p)
 
-
+if __name__ == '__main__':
+    check_solution(sys.argv[1], sys.argv[2])
