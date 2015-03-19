@@ -1,0 +1,81 @@
+This week's problem comes from the design of very large scale integrated circuits.
+
+It's about connecting pairs of terminals on a 3 dimensional grid-like switchboard with multiple layers.
+
+For a (large) positive integer n, and a small positive integer k, the size of the grid is n x n x k; the coordinates of a node on the grid are (x,y,z) with x,y in {0,...,n-1}, z in {0,...,k-1}.
+
+The z-dimension identifies the layer.
+
+We will have to connect <i>terminals</i>: Terminals come pairs ( (x_0,y_0), (x_1,y_1) ).  A single terminal is just a coordinate (x,y) in {0,...,n-1} x {0,...,n-1} with
+
+(x=0 or x=n-1) and (y=0 or y=n-1),
+
+(but the corners x=0,y=0; x=0,y=n-1; ... are forbidden.)
+
+A list of pairs coordinates of terminals is given:
+
+terminal_pairs = [ ((x_0,y_0),(x_1,y_1)), ... ]
+
+E.g., terminal_pair[j][0] gives the x,y-coordinates of the first terminal of the two terminals in the jth pair.  All the terminal nodes will be distinct.
+
+
+
+For each of the terminal pairs, a route between the two terminals has to be found.
+
+Two routes cannot have a node in common.  This is where the layers come in.  The layers are numbered 0,1,2, ... Layer number k has the following form.
+
+The nodes have coordinates (x,y,z).
+
+If z is even: Wires between (x,y,z) and (x+1,y,z) can be used (= created), for every x in {0,...,n-2}, y in {0,...,n-1}.
+
+If z is odd: Wires between (x,y,z) and (x,y+1,z) can be used (= created), for every x in {0,...,n-1}, y in {0,...,n-2}.
+
+If z>0: Wires between (x,y,z-1) and (x,y,z) can be used (=created), for every x in {0,...,n-1}, y in {0,...,n-1}.
+
+In other words, on the even levels, the wires can run in left-right direction, on the odd levels, the wires can run in front-back direction.  Every node can be wired to the node directly above and below it (vertical).
+Compare the function legal_wire_cost() in data.py.
+
+Finally, we need to connect the terminals to the whole thing: A terminal with coordinates (x,y) can be wired to the nodes (x,y,0), (x,y,1), (x,y,2), ..., (x,y,k-1).
+In other words, the terminals are wired "diagonally" to the corresponding grid nodes.
+
+
+The goal is the following.  For each pair of given terminals, find a route, such that no two routes share a node.  The routes should be
+
+* as short as possible (use/create as few wires as possible)
+* use as few layers as possible (k should be small)
+
+The cost of the left-right and front-back wires are all 1 (say), the cost of the vertical and diagonal wires are 10.
+
+Write a software which produces optimal routes.  (Since, after planning the circuit layout, thousands of circuits will be produced, it makes sense to invest a couple of hours computation time to really get the best possible wiring.)
+
+There are two possible ways to approach this.  One is that you start with k=1, compute a solution (if one exists) for this number of layers, then increase k, and so on, creating a table number of layers vs. wiring cost.
+
+The other approach is to assume that the cost of adding a new layer equals, say, for simplicity, 100n^2.
+
+
+Input File Format
+The input file is produced by code like this:
+
+json.dump( (n,terminal_pairs) , f)
+
+where terminal_pairs, as above, a list of pairs of pairs.
+
+
+
+Output File Format
+The output file should should be of the form
+
+[k,routes]
+
+where k is the number of layers, and routes is a list of routes, one for each terminal pair.
+
+The route for terminal pair t,
+
+routes[t]
+
+should be a list which has, as its 0th entry, terminal_pairs[t][0], i.e., the coordinate of the first terminal, and as its last entry terminal_pairs[t][1], i.e., the coordinate of the last terminal.  These are (x,y) coordinates.
+
+The other entries should be (x,y,z) coordinates such that the wire between routes[t][j] and routes[t][j+1] can be used/constructed.
+
+Read the function check_solution() carefully to understand the output file format.  (Also to make sure I didn't make a mistake writing it.)
+
