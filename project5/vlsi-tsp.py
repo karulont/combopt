@@ -1,7 +1,24 @@
 import sys
 import math
+#import networkx as nx
 from data import *
 from gurobipy import *
+
+# data.legal_wire_cost doesn't return None for some illegal wires.
+# Use is_legal_wire first.
+def is_legal_wire(x,y,z, x_,y_,z_, n,k):
+    if z<0 or z>=k or z_<0 or z_>=k:
+        return False
+    if x<0 or x>=n or x_<0 or x_>=n or y<0 or y>=n or y_<0 or y_>=n:
+        return False
+
+    if x==x_ and y==y_ and abs(z-z_)==1:
+        return True
+    if x==x_ and abs(y-y_)==1 and z==z_ and z%2==1:
+        return True
+    if abs(x-x_)==1 and y==y_ and z==z_ and z%2==0:
+        return True
+    return False
 
 
 # Read data
@@ -13,8 +30,10 @@ for t1,t2 in pairs:
     terminals.append(tuple(t2))
 nt = len(terminals)
 
-#n=2
 k=2
+
+
+#G = nx.Graph()
 
 
 # Create vertices
@@ -23,7 +42,9 @@ for x in range(n):
     for y in range(n):
         for z in range(k):
             points.append((x,y,z))
+            #G.add_node(n*k*x+k*y+z, p=(x,y,z))
 np = len(points)
+
 
 m = Model()
 
@@ -32,13 +53,14 @@ vars = {}
 
 # Add wires between nodes
 for i in range(np):
-    for j in range(i + 1):
+    for j in range(i+1):
         x1,y1,z1 = points[i]
         x2,y2,z2 = points[j]
-        cost = legal_wire_cost(x1,y1,z1, x2,y2,z2, n, k)
-        if cost is None:
+        if not is_legal_wire(x1,y1,z1, x2,y2,z2, n,k):
             continue
+        cost = legal_wire_cost(x1,y1,z1, x2,y2,z2, n,k)
         #print(str(pi) + " " + str(pj) + " c=" + str(cost))
+        #G.add_edge(n*k*x1+k*y1+z1, n*k*x2+k*y2+z2, c=cost)
         vars[i,j] = m.addVar(obj=cost, vtype=GRB.BINARY,
                              name='e'+str(i)+'_'+str(j))
         vars[j,i] = vars[i,j]
@@ -49,8 +71,6 @@ for x,y in terminals:
     for z in range(k):
         t_vars[x,y,z] = m.addVar(obj=10, vtype=GRB.BINARY,
                                  name='t'+str(x)+'_'+str(y)+'_'+str(z))
-        #t_vars[z,t] = t_vars[t,z]
-        #print('t'+str(t)+'_'+str(z))
 
 m.update()
 
