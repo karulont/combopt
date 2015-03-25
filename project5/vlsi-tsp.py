@@ -1,6 +1,5 @@
 import sys
 import math
-#import networkx as nx
 from data import *
 from gurobipy import *
 
@@ -33,16 +32,12 @@ nt = len(terminals)
 k=2
 
 
-#G = nx.Graph()
-
-
 # Create vertices
 points = []
 for x in range(n):
     for y in range(n):
         for z in range(k):
             points.append((x,y,z))
-            #G.add_node(n*k*x+k*y+z, p=(x,y,z))
 np = len(points)
 
 
@@ -50,17 +45,17 @@ m = Model()
 
 # Create variables
 vars = {}
+degs = {}
 
 # Add wires between nodes
 for i in range(np):
+    degs[i] = m.addVar(vtype=GRB.BINARY)
     for j in range(i+1):
         x1,y1,z1 = points[i]
         x2,y2,z2 = points[j]
         if not is_legal_wire(x1,y1,z1, x2,y2,z2, n,k):
             continue
         cost = legal_wire_cost(x1,y1,z1, x2,y2,z2, n,k)
-        #print(str(pi) + " " + str(pj) + " c=" + str(cost))
-        #G.add_edge(n*k*x1+k*y1+z1, n*k*x2+k*y2+z2, c=cost)
         vars[i,j] = m.addVar(obj=cost, vtype=GRB.BINARY,
                              name='e'+str(i)+'_'+str(j))
         vars[j,i] = vars[i,j]
@@ -73,7 +68,6 @@ for x,y in terminals:
                                  name='t'+str(x)+'_'+str(y)+'_'+str(z))
 
 m.update()
-
 
 # Add degree-1 constraint for terminals
 for x,y in terminals:
@@ -90,10 +84,7 @@ for i in range(np):
     if points[i] in t_vars:
         vars_ij.append(t_vars[points[i]])
 
-    m.addConstr(quicksum(vars_ij) * 0.5, GRB.LESS_EQUAL, 1)
-    #m.addConstr(quicksum(vars_ij) == 2)
-
-m.update()
+    m.addConstr(quicksum(vars_ij) * 0.5, GRB.EQUAL, degs[i])
 
 
 # Optimize model
@@ -103,13 +94,32 @@ m.optimize()
 solution = m.getAttr('x', vars)
 for v in vars:
     if solution[v] > 0.5:
-        print(str(v) + ' ' + str(solution[v]))
+        print(str(points[v[0]]) + ' ' + str(points[v[1]]) + ' ' + str(solution[v]))
 
-solution = m.getAttr('x', t_vars)
+t_solution = m.getAttr('x', t_vars)
 for v in t_vars:
-    if solution[v] > 0.5:
-        print(str(v) + ' ' + str(solution[v]))
+    if t_solution[v] > 0.5:
+        print('t: ' + str(v) + ' ' + str(t_solution[v]))
 
 print('')
 print('Optimal cost: %g' % m.objVal)
 print('')
+
+# Write solution
+s = []
+for t1,t2 in pairs:
+    route = []
+    route.append(t1)
+    for z in range(k):
+        if t_solution[(t1[0],t1[1],z)] > 0.5:
+            t1v = v
+            break
+    route.append(t1v)
+    # TODO - backtrack route
+    route.append(t2)
+    s.append(route)
+
+with open("switchboard-0016-002-sol2.vlsi", 'w') as f:
+    json.dump( (n,s) ,  f)
+
+check_solution("switchboard-0016-002.vlsi", "switchboard-0016-002-sol2.vlsi")
