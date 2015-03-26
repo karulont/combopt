@@ -105,7 +105,8 @@ def path_elim(m, where):
 
 # Read data
 print("Reading data")
-(n,pairs) = read_instance_from_file("switchboard-0300-017.vlsi")
+#(n,pairs) = read_instance_from_file("switchboard-0032-004.vlsi")
+(n,pairs) = read_instance_from_file("switchboard-0016-002.vlsi")
 
 print("Processing...")
 terminals = []
@@ -118,13 +119,8 @@ k=2
 
 
 # Create vertices
-points = []
-for x in range(n):
-    for y in range(n):
-        for z in range(k):
-            points.append((x,y,z))
-np = len(points)
-
+np = n*n*k
+print(np)
 
 # Create model
 print("Creating model")
@@ -133,27 +129,45 @@ vars = {}
 degs = {}
 t_vars = {}
 
+tid = 0
+idmap = {}
+def v_id(x,y,z):
+    global tid
+    global idmap
+    if (x,y,z) in idmap:
+        return idmap[x,y,z]
+    
+    #return n*n*z + n*y + x
+    idmap[x,y,z] = tid
+    tid += 1
+    return idmap[x,y,z]
+    #return x*n*k + y*n + z
+    #return tid
+
 # Add wires between nodes
 print("Adding wire vars")
-for i in range(np):
-    print(i)
-    degs[i] = m.addVar(vtype=GRB.BINARY)
-    for j in range(i+1):
-        x1,y1,z1 = points[i]
-        x2,y2,z2 = points[j]
-        if not is_legal_wire(x1,y1,z1, x2,y2,z2, n,k):
-            continue
-        cost = legal_wire_cost(x1,y1,z1, x2,y2,z2, n,k)
-        vars[i,j] = m.addVar(obj=cost, vtype=GRB.BINARY)
-                             #name='e'+str(i)+'_'+str(j))
-        vars[j,i] = vars[i,j]
+for x in range(n):
+    for y in range(n):
+        for z in range(k):
+            i = v_id(x,y,z)
+            degs[i] = m.addVar(vtype=GRB.BINARY)
+            if z%2 == 0:
+                if x < n-1:
+                    vars[i, v_id(x+1,y,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                    #vars[v_id(x+1,y,z), i] = vars[i, v_id(x+1,y,z)]
+            else:
+                if y < n-1:
+                    vars[i, v_id(x,y+1,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                    #vars[v_id(x,y+1,z), i] = vars[i, v_id(x,y+1,z)]
+            if z < k-1:
+                vars[i, v_id(x,y,z+1)] = m.addVar(obj=10, vtype=GRB.BINARY)
+                #vars[v_id(x,y,z+1), i] = vars[i, v_id(x,y,z+1)]
 
 # Add diagonal wires between the terminal node and the k nodes that it might connect to
 print("Adding terminal vars")
 for x,y in terminals:
     for z in range(k):
         t_vars[x,y,z] = m.addVar(obj=10, vtype=GRB.BINARY)
-                                 #name='t'+str(x)+'_'+str(y)+'_'+str(z))
 
 print("Updating model")
 m.update()
@@ -167,28 +181,43 @@ for x,y in terminals:
 
 
 # Add degree 0 or 2 constraint
-for i in range(np):
-    vars_ij = []
-    for j in range(np):
-        if (i,j) in vars:
-            vars_ij.append(vars[i,j])
+for x in range(n):
+    for y in range(n):
+        for z in range(k):
+            point_edges = []
+            i = v_id(x,y,z)
+            if z%2 == 0:
+                if x < n-1:
+                    point_edges.append(vars[i, v_id(x+1,y,z)])
+                if x > 0:
+                    point_edges.append(vars[v_id(x-1,y,z), i])
+            else:
+                if y < n-1:
+                    point_edges.append(vars[i, v_id(x,y+1,z)])
+                if y > 0:
+                    point_edges.append(vars[v_id(x,y-1,z), i])
+            if z < k-1:
+                point_edges.append(vars[i, v_id(x,y,z+1)])
+            if z > 0:
+                point_edges.append(vars[v_id(x,y,z-1), i])
 
-    if points[i] in t_vars:
-        vars_ij.append(t_vars[points[i]])
+            if (x,y,z) in t_vars:
+                point_edges.append(t_vars[x,y,z])
 
-    m.addConstr(quicksum(vars_ij) * 0.5, GRB.EQUAL, degs[i])
+            print(str((x,y,z)) + ' ' + str(point_edges))
+            m.addConstr(quicksum(point_edges) * 0.5, GRB.EQUAL, degs[i])
 
 
 # Optimize model
 m._vars = vars
 m._t_vars = t_vars
 m._pairs = pairs
-m._points = points
+#m._points = points
 m._k = k
-m.params.LazyConstraints = 1
+#m.params.LazyConstraints = 1
 
 print("Optimizing")
-m.optimize(path_elim)
+m.optimize()
 '''
 e_selected = get_solution_nonzero(m.getAttr('x', vars), vars)
 g = nx.Graph()
@@ -221,6 +250,8 @@ for t1,t2 in pairs:
 solution = m.getAttr('x', vars)
 for v in vars:
     if solution[v] > 0.5:
+        print(str(v))
+        print(str(solution[v]))
         #print(str(points[v[0]]) + ' ' + str(points[v[1]]) + ' ' + str(solution[v]))
         pass
 
