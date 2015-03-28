@@ -1,7 +1,7 @@
 #/usr/bin/python3
 import json
 import random
-from math import sqrt
+from sys import argv
 
 ####################################################################################################
 
@@ -112,3 +112,6 @@ def generate_some_random_instances():
         (n,tp) = random_instance(n,T)
         fn = "switchboard-{0:0>4}-{1:0>3}.vlsi".format(n,T)
         write_instance_to_file(fn,n,tp)
+
+if __name__ == '__main__':
+  check_solution(argv[1], argv[2] if len(argv) >= 3 else argv[1] + '.sol')
