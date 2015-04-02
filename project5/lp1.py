@@ -87,6 +87,12 @@ def solve(n, pairs, k):
       m.addConstr(wire_vars[(i, p)] <= node_vars[(n1, p)])
       m.addConstr(wire_vars[(i, p)] <= node_vars[(n2, p)])
 
+  # sum of adjacent wires of a node must be less than 2 if node is used
+  for j in nodes_iter():
+      for p in pairs:
+          adjacent_wires = [wire_vars[(i,p)] for i in adjacent_wires_iter(j)]
+          m.addConstr(quicksum(adjacent_wires) <= 2*node_vars[(j,p)])
+
   # every node must be part of either 0 or 1 routes
   for j in nodes_iter():
     m.addConstr(quicksum([node_vars[(j, p)] for p in pairs]) <= 1)
@@ -137,7 +143,7 @@ def write_output(file, solution):
 def main():
   input_file = argv[1] if len(argv) >= 2 else 'switchboard-0016-002.vlsi'
   n, pairs = read_input(input_file)
-  solution = solve(n, pairs, 2)
+  solution = solve(n, pairs, 3)
   if solution:
     output_file = argv[2] if len(argv) >= 3 else input_file + '.sol'
     write_output(output_file, solution)
