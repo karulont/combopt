@@ -78,17 +78,24 @@ def solve(n, pairs, k):
       vars = [wire_vars[(i, p)] for i in ws]
       if (x, y) in p:  # if the node is connected to a terminal, add 1 to edge count
         vars.append(term_vars[j])
-      m.addConstr(quicksum(vars), GRB.EQUAL, 2 * node_vars[(j, p)])
+      m.addConstr(quicksum(vars) == 2 * node_vars[(j, p)])
+
+  # wires can only be used if their endpoints are used
+  for i in wires_iter():
+    for p in pairs:
+      n1, n2 = i
+      m.addConstr(wire_vars[(i, p)] <= node_vars[(n1, p)])
+      m.addConstr(wire_vars[(i, p)] <= node_vars[(n2, p)])
 
   # every node must be part of either 0 or 1 routes
   for j in nodes_iter():
-    m.addConstr(quicksum([node_vars[(j, p)] for p in pairs]), GRB.LESS_EQUAL, 1)
+    m.addConstr(quicksum([node_vars[(j, p)] for p in pairs]) <= 1)
 
   # each terminal is connected at exactly 1 level
   for t in terminals:
     x, y = t
     vars = [term_vars[(x, y, z)] for z in range(k)]
-    m.addConstr(quicksum(vars), GRB.EQUAL, 1)
+    m.addConstr(quicksum(vars) == 1)
 
   print('Solving...')
 
@@ -97,10 +104,17 @@ def solve(n, pairs, k):
 
   if m.status == GRB.status.OPTIMAL:
     print('\nFound solution with total cost', m.objVal, 'using', k, 'layers')
+    if n <= 5:
+      for wire, x in m.getAttr('x', wire_vars).items():
+        if x > 0: print('Wire', wire, ':', x)
+      for node, x in m.getAttr('x', node_vars).items():
+        if x > 0: print('Node', node, ':', x)
+      for term, x in m.getAttr('x', term_vars).items():
+        if x > 0: print('Term', term, ':', x)
     graph = nx.Graph()
     graph.add_edges_from([wire[0] for wire, x in m.getAttr('x', wire_vars).items() if x > 0])
     graph.add_edges_from([(term[0:2], term) for term, x in m.getAttr('x', term_vars).items() if x > 0])
-    routes = map(lambda p: nx.shortest_path(graph, *p), pairs)
+    routes = [nx.shortest_path(graph, *p) for p in pairs]
     return k, list(routes)
 
   print('\nNo solution found.')
@@ -110,7 +124,7 @@ def solve(n, pairs, k):
 def read_input(file):
   print('Reading input from', file)
   n, pairs = read_instance_from_file(file)
-  pairs = list(map(lambda p: (tuple(p[0]), tuple(p[1])), pairs))
+  pairs = [(tuple(p[0]), tuple(p[1])) for p in pairs]
   return n, pairs
 
 
