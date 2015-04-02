@@ -80,6 +80,16 @@ def solve(n, pairs, k):
         vars.append(term_vars[j])
       m.addConstr(quicksum(vars) == 2 * node_vars[(j, p)])
 
+  for j in nodes_iter():
+    x, y, z = j
+    ws = list(adjacent_wires_iter(j))
+    vars = []
+    for p in pairs:
+      vars += [wire_vars[(i, p)] for i in ws]
+      if (x, y) in p:  # if the node is connected to a terminal, add 1 to edge count
+        vars.append(term_vars[j])
+    m.addConstr(quicksum(vars) == 2 * quicksum(node_vars[(j, p)] for p in pairs))
+
   # wires can only be used if their endpoints are used
   for i in wires_iter():
     for p in pairs:
@@ -143,7 +153,7 @@ def write_output(file, solution):
 def main():
   input_file = argv[1] if len(argv) >= 2 else 'switchboard-0016-002.vlsi'
   n, pairs = read_input(input_file)
-  solution = solve(n, pairs, 3)
+  solution = solve(n, pairs, 2)
   if solution:
     output_file = argv[2] if len(argv) >= 3 else input_file + '.sol'
     write_output(output_file, solution)
