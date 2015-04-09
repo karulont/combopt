@@ -99,6 +99,9 @@ def path_elim(m, where):
             if route[-1] != t2i:
                 #print("Wrong path!")
                 print("eliminate path of length " + str(len(route)))
+                #for r in route:
+                #    print(get_v(r))
+                #print(get_v(t1i), get_v(t2i))
                 expr = m._t_vars[t1i]
                 for i in range(len(route)-1):
                     expr += m._vars[(route[i], route[i+1])]
@@ -111,7 +114,7 @@ def path_elim(m, where):
 def create_model(n,k):
     print("Creating model")
     m = Model()
-    vars = {}
+    wire_vars = {}
     degs = {}
     t_vars = {}
 
@@ -124,12 +127,12 @@ def create_model(n,k):
                 degs[i] = m.addVar(vtype=GRB.BINARY)
                 if z%2 == 0:
                     if x < n-1:
-                        vars[v_id(x+1,y,z), i] = vars[i, v_id(x+1,y,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                        wire_vars[v_id(x+1,y,z), i] = wire_vars[i, v_id(x+1,y,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
                 else:
                     if y < n-1:
-                        vars[v_id(x,y+1,z), i] = vars[i, v_id(x,y+1,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                        wire_vars[v_id(x,y+1,z), i] = wire_vars[i, v_id(x,y+1,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
                 if z < k-1:
-                    vars[v_id(x,y,z+1), i] = vars[i, v_id(x,y,z+1)] = m.addVar(obj=10, vtype=GRB.BINARY)
+                    wire_vars[v_id(x,y,z+1), i] = wire_vars[i, v_id(x,y,z+1)] = m.addVar(obj=10, vtype=GRB.BINARY)
 
     # Add diagonal wires between the terminal node and the k nodes that it might connect to
     print("Adding terminal vars")
@@ -156,27 +159,63 @@ def create_model(n,k):
                 i = v_id(x,y,z)
                 if z%2 == 0:
                     if x < n-1:
-                        point_edges.append(vars[i, v_id(x+1,y,z)])
+                        point_edges.append(wire_vars[i, v_id(x+1,y,z)])
                     if x > 0:
-                        point_edges.append(vars[v_id(x-1,y,z), i])
+                        point_edges.append(wire_vars[v_id(x-1,y,z), i])
                 else:
                     if y < n-1:
-                        point_edges.append(vars[i, v_id(x,y+1,z)])
+                        point_edges.append(wire_vars[i, v_id(x,y+1,z)])
                     if y > 0:
-                        point_edges.append(vars[v_id(x,y-1,z), i])
+                        point_edges.append(wire_vars[v_id(x,y-1,z), i])
                 if z < k-1:
-                    point_edges.append(vars[i, v_id(x,y,z+1)])
+                    point_edges.append(wire_vars[i, v_id(x,y,z+1)])
                 if z > 0:
-                    point_edges.append(vars[v_id(x,y,z-1), i])
+                    point_edges.append(wire_vars[v_id(x,y,z-1), i])
 
                 if i in t_vars:
                     point_edges.append(t_vars[i])
 
                 m.addConstr(quicksum(point_edges) * 0.5, GRB.EQUAL, degs[i])
 
+    #
+    for p1,p2 in wire_vars:
+        m.addConstr(wire_vars[p1,p2] <= degs[p1])
+        m.addConstr(wire_vars[p1,p2] <= degs[p2])
+
+    for x1 in range(n-1):
+        x2 = x1 + 1
+        col_vars = []
+        for y in range(n):
+            for z in range(k):
+                i1 = v_id(x1,y,z)
+                i2 = v_id(x2,y,z)
+                if (i1, i2) in wire_vars:
+                    col_vars.append(wire_vars[i1,i2])
+        p_count=0
+        for p in pairs:
+            if (p[0][0] > x1 and p[1][0] < x2) or (p[0][0] < x2 and p[1][0] > x1):
+                p_count += 1
+        m.addConstr(quicksum(col_vars) >= p_count)
+
+    for y1 in range(n-1):
+        y2 = y1 + 1
+        col_vars = []
+        for x in range(n):
+            for z in range(k):
+                i1 = v_id(x,y1,z)
+                i2 = v_id(x,y2,z)
+                if (i1, i2) in wire_vars:
+                    col_vars.append(wire_vars[i1,i2])
+        p_count=0
+        for p in pairs:
+            if (p[0][1] > y1 and p[1][1] < y2) or (p[0][1] < y2 and p[1][1] > y1):
+                p_count += 1
+        print(p_count)
+        m.addConstr(quicksum(col_vars) >= p_count)
+
 
     # Optimize model
-    m._vars = vars
+    m._vars = wire_vars
     m._t_vars = t_vars
     m._pairs = pairs
     m._k = k
@@ -184,8 +223,11 @@ def create_model(n,k):
     return m
 
 
+filename1 = argv[1] if len(argv) > 1 else "switchboard-0032-004.vlsi"
+filename2 = argv[2] if len(argv) == 3 else "switchboard-0032-004-sol2.vlsi"
+
 print("Reading data")
-(n,pairs) = read_instance_from_file(argv[1] if len(argv) > 1 else "switchboard-0020-003.vlsi")
+(n,pairs) = read_instance_from_file(filename1)
 
 print("Processing...")
 terminals = []
@@ -244,7 +286,7 @@ for t1,t2 in pairs:
     print(route)
     s.append(route)
 
-with open(argv[2] if len(argv) == 3 else "switchboard-0020-003-sol2.vlsi", 'w') as f:
+with open(filename2, 'w') as f:
     json.dump( (k,s) ,  f)
 
-check_solution(argv[1] if len(argv) > 1 else "switchboard-0020-003.vlsi", argv[2] if len(argv) == 3 else "switchboard-0020-003-sol2.vlsi")
+check_solution(filename1, filename2)
