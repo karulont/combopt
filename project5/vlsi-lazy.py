@@ -177,11 +177,13 @@ def create_model(n,k):
 
                 m.addConstr(quicksum(point_edges) * 0.5, GRB.EQUAL, degs[i])
 
-    #
+    # wires can only be used if their endpoints are used
     for p1,p2 in wire_vars:
         m.addConstr(wire_vars[p1,p2] <= degs[p1])
         m.addConstr(wire_vars[p1,p2] <= degs[p2])
 
+    
+    #horisontaalsed jooned eraldajateks
     for x1 in range(n-1):
         x2 = x1 + 1
         col_vars = []
@@ -191,12 +193,22 @@ def create_model(n,k):
                 i2 = v_id(x2,y,z)
                 if (i1, i2) in wire_vars:
                     col_vars.append(wire_vars[i1,i2])
+##        p_count=0
+##        for p in pairs:
+##            if (p[0][0] > x1 and p[1][0] < x2) or (p[0][0] < x2 and p[1][0] > x1):
+##                p_count += 1
+
         p_count=0
         for p in pairs:
-            if (p[0][0] > x1 and p[1][0] < x2) or (p[0][0] < x2 and p[1][0] > x1):
+            center_x=(x1+ x1+1)/2
+            #joone valem: x-center_x=0
+            p1_side=sign(p[0][0]-center_x)
+            p2_side=sign(p[1][0]-center_x)
+            if p1_side!=p2_side:            
                 p_count += 1
         m.addConstr(quicksum(col_vars) >= p_count)
 
+    #vertikaalsed jooned eraldajateks
     for y1 in range(n-1):
         y2 = y1 + 1
         col_vars = []
@@ -206,13 +218,129 @@ def create_model(n,k):
                 i2 = v_id(x,y2,z)
                 if (i1, i2) in wire_vars:
                     col_vars.append(wire_vars[i1,i2])
+##        p_count=0
+##        for p in pairs:
+##            if (p[0][1] > y1 and p[1][1] < y2) or (p[0][1] < y2 and p[1][1] > y1):
+##                p_count += 1
         p_count=0
         for p in pairs:
-            if (p[0][1] > y1 and p[1][1] < y2) or (p[0][1] < y2 and p[1][1] > y1):
+            center_y=(y1+ y1+1)/2
+            #joone valem: y-center_y=0
+            p1_side=sign(p[0][1]-center_y)
+            p2_side=sign(p[1][1]-center_y)
+            if p1_side!=p2_side:            
                 p_count += 1
         print(p_count)
         m.addConstr(quicksum(col_vars) >= p_count)
 
+    #suunaga alla diagonaalid(alumine pool)
+    for x1 in range(1,n):
+        diag_col_vars = []
+        for z in range(k):
+            v0=[x1,0]
+            
+            while v0[0] != 0:
+                left_i1 = v_id(v0[0],v0[1],z)
+                left_i2 = v_id(v0[0]-1,v0[1],z)
+                if (left_i1, left_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[left_i1, left_i2])
+
+                up_i1 = v_id(v0[0]-1,v0[1],z)
+                up_i2 = v_id(v0[0]-1,v0[1]+1,z)
+                if (up_i1, up_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[up_i1, up_i2])
+                    
+                v0 = [v0[0]-1,v0[1]+1]
+
+        p_count=0
+        for p in pairs:
+            center_x=(x1+ x1-1)/2
+            center_y=0
+            tous=-1#kuna suunaga alla
+            p_count += get_diag_cols_count(p[0],p[1],center_x, center_y, tous)
+        m.addConstr(quicksum(diag_col_vars) >= p_count)
+
+    #suunaga alla diagonaalid(ülemine pool)
+    for y1 in range(0,n-1):
+        diag_col_vars = []
+        for z in range(k):
+            v0=[n, y1]
+            
+            while v0[1] != n:
+                up_i1 = v_id(v0[0],v0[1],z)
+                up_i2 = v_id(v0[0],v0[1]+1,z)
+                if (up_i1, up_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[up_i1, up_i2])
+                    
+                left_i1 = v_id(v0[0],v0[1]+1,z)
+                left_i2 = v_id(v0[0]-1,v0[1]+1,z)
+                if (left_i1, left_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[left_i1, left_i2])
+                    
+                v0 = [v0[0]-1,v0[1]+1]
+
+        p_count=0
+        for p in pairs:
+            center_x=n
+            center_y=(y1+ y1+1)/2
+            tous=-1#kuna suunaga alla
+            p_count += get_diag_cols_count(p[0],p[1],center_x, center_y, tous)
+        m.addConstr(quicksum(diag_col_vars) >= p_count)
+
+    #suunaga üles diagonaalid (alumine pool)
+    for x1 in range(0,n-1):
+        diag_col_vars = []
+        for z in range(k):
+            v0=[x1,0]
+            
+            while v0[0] != n:
+                right_i1 = v_id(v0[0],v0[1],z)
+                right_i2 = v_id(v0[0]+1,v0[1],z)
+                if (right_i1, right_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[right_i1, right_i2])
+
+                up_i1 = v_id(v0[0]+1,v0[1],z)
+                up_i2 = v_id(v0[0]+1,v0[1]+1,z)
+                if (up_i1, up_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[up_i1, up_i2])
+                    
+                v0 = [v0[0]+1,v0[1]+1]
+
+        p_count=0
+        for p in pairs:
+            center_x=(x1+ x1+1)/2
+            center_y=0
+            tous=1#kuna suunaga üles
+            p_count += get_diag_cols_count(p[0],p[1],center_x, center_y, tous)
+        m.addConstr(quicksum(diag_col_vars) >= p_count)
+
+    #suunaga üles diagonaalid (ülemine pool)
+    for y1 in range(0,n-1):
+        diag_col_vars = []
+        for z in range(k):
+            v0=[0,y1]
+            
+            while v0[1] != n:
+                up_i1 = v_id(v0[0],v0[1],z)
+                up_i2 = v_id(v0[0],v0[1]+1,z)
+                if (up_i1, up_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[up_i1, up_i2])
+                    
+                right_i1 = v_id(v0[0],v0[1]+1,z)
+                right_i2 = v_id(v0[0]+1,v0[1]+1,z)
+                if (right_i1, right_i2) in wire_vars:
+                    diag_col_vars.append(wire_vars[right_i1, right_i2])
+                
+                v0 = [v0[0]+1,v0[1]+1]
+
+        p_count=0
+        for p in pairs:
+            center_x=0
+            center_y=(y1+ y1+1)/2
+            tous=1#kuna suunaga üles
+            p_count += get_diag_cols_count(p[0],p[1],center_x, center_y, tous)
+        m.addConstr(quicksum(diag_col_vars) >= p_count)
+        
 
     # Optimize model
     m._vars = wire_vars
@@ -223,8 +351,30 @@ def create_model(n,k):
     return m
 
 
-filename1 = argv[1] if len(argv) > 1 else "switchboard-0032-004.vlsi"
-filename2 = argv[2] if len(argv) == 3 else "switchboard-0032-004-sol2.vlsi"
+# centerpoint_x - punkt,
+#   mida loodav joon peab läbima(kahe päris punkti vahel, et ei oleks "joone peal")
+def get_diag_cols_count(p1,p2,centerpoint_x, centerpoint_y, tous):
+    p1_side=get_middle_line_side(centerpoint_x, centerpoint_y, tous, p1[0],p1[1])
+    p2_side=get_middle_line_side(centerpoint_x, centerpoint_y, tous, p2[0],p2[1])
+    if p1_side!=p2_side:#kui pooled ei ole võrdsed, siis peab ületama, ühendades A ja A'
+        return 1
+    return 0
+
+#returns -1 kui ühel pool, +1 kui teisel pool, 0 kui joone peal
+def get_middle_line_side(centerpoint_x, centerpoint_y, tous, p_x, p_y):
+    #ühe punkti ja tõusu valemiga; tõus alati -1 või 1, p=(centerpoint_x,centerpoint_y)
+    return sign(p_y - centerpoint_y - tous*(p_x-centerpoint_x))
+
+#tagastab numbri märgi (-1,0,1)
+def sign(nr):
+    if nr>0:
+        return 1
+    elif nr<0:
+        return -1
+    return 0
+
+filename1 = argv[1] if len(argv) > 1 else "switchboard-0048-006.vlsi"
+filename2 = argv[2] if len(argv) == 3 else "switchboard-0048-006-sol2.vlsi"
 
 print("Reading data")
 (n,pairs) = read_instance_from_file(filename1)
