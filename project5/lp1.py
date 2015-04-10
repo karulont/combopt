@@ -73,11 +73,10 @@ def solve(n, pairs, k):
 
   # every node must have either 0 or 2 adjacent selected edges
   for j in nodes_iter():
-    x, y, z = j
     ws = list(adjacent_wires_iter(j))
     for p in pairs:
       vars = [wire_vars[i, p] for i in ws]
-      if (x, y) in p:  # if the node is connected to a terminal, add 1 to edge count
+      if j[0:2] in p:  # if the node is connected to a terminal, add 1 to edge count
         vars.append(term_vars[j])
       m.addConstr(quicksum(vars) == 2 * node_vars[j, p])
 
@@ -93,26 +92,27 @@ def solve(n, pairs, k):
     m.addConstr(quicksum([node_vars[j, p] for p in pairs]) <= 1)
 
   # each terminal is connected at exactly 1 level
-  for t in terminals:
-    x, y = t
+  for x, y in terminals:
     vars = [term_vars[x, y, z] for z in range(k)]
     m.addConstr(quicksum(vars) == 1)
 
 
   def add_node_depth_constraints(visited_nodes, nodes, pair, depth):
-    if depth > 70: return
+    if depth > 71: return
     #print('depth', depth, 'nodes', len(nodes))
+    m.addConstr(quicksum([node_vars[node, pair] for node in nodes]) >= 1)
+
+    if depth > 0:
+      for node in nodes:
+        if node[0:2] in pair: # we stop if we reach the other endpoint (the constraints do not hold beyond this point)
+          return
+
+    visited_nodes.update(nodes)
+
     next_nodes = set()
     for node in nodes:
       next_nodes.update(*adjacent_wires_iter(node))
-    next_nodes.difference_update(nodes)
     next_nodes.difference_update(visited_nodes)
-    vars = [node_vars[node, pair] for node in next_nodes]
-    m.addConstr(quicksum(vars) >= 1)
-    for node in next_nodes:
-      if node[0:2] in pair: # we stop if we reach the other endpoint (the constraints do not hold beyond this point)
-        return
-    visited_nodes.update(nodes)
     add_node_depth_constraints(visited_nodes, next_nodes, pair, depth + 1)
 
   for x, y in terminals:
