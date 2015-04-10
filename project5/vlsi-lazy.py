@@ -3,6 +3,7 @@ import math
 import networkx as nx
 from data import *
 from gurobipy import *
+import draw
 
 def get_solution_nonzero(solution, vars):
     selected = {}
@@ -74,7 +75,7 @@ def path_elim(m, where):
 
         wire_sel = get_mip_solution_selected(m,m._vars)
         term_sel = get_mip_solution_selected(m,m._t_vars)
-
+        
         g = nx.Graph()
         for e in wire_sel:
             g.add_edge(e[0], e[1])
@@ -95,7 +96,7 @@ def path_elim(m, where):
                     t = tn[1]
                 else:
                     t = tn[0]
-
+            
             if route[-1] != t2i:
                 #print("Wrong path!")
                 print("eliminate path of length " + str(len(route)))
@@ -348,6 +349,8 @@ def create_model(n,k):
     m._pairs = pairs
     m._k = k
     m.params.LazyConstraints = 1
+##    m.params.MIPFocus = 3
+    
     return m
 
 
@@ -376,7 +379,7 @@ def sign(nr):
 filename1 = argv[1] if len(argv) > 1 else "switchboard-0048-006.vlsi"
 filename2 = argv[2] if len(argv) == 3 else "switchboard-0048-006-sol2.vlsi"
 
-print("Reading data")
+print("Reading data from:", filename1)
 (n,pairs) = read_instance_from_file(filename1)
 
 print("Processing...")
@@ -440,3 +443,4 @@ with open(filename2, 'w') as f:
     json.dump( (k,s) ,  f)
 
 check_solution(filename1, filename2)
+draw.draw(n,s)
