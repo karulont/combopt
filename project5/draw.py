@@ -32,6 +32,7 @@ def draw(n,paths):
             turtle.setpos(getCoord(x),getCoord(y))
             turtle.pendown()
     turtle.ht()
+    input()
     
         
 
