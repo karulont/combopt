@@ -41,6 +41,7 @@ def solve(n, pairs, k):
 
   m = Model('project5')
   terminals = set(sum(pairs, ()))
+  term_to_pair = {t: p for p in pairs for t in p}
 
   print('Adding variables...')
 
@@ -48,23 +49,23 @@ def solve(n, pairs, k):
   node_vars = {}
   term_vars = {}
 
-  # wire_vars[(i, p)] == 1 iff wire i is part of the route that connects pair p
+  # wire_vars[i, p] == 1 iff wire i is part of the route that connects pair p
   for i in wires_iter():
     is_vertical = i[0][2] != i[1][2]
     cost = 10 if is_vertical else 1
     for p in pairs:
-      wire_vars[(i, p)] = m.addVar(obj=cost, vtype=GRB.BINARY)
+      wire_vars[i, p] = m.addVar(obj=cost, vtype=GRB.BINARY)
 
-  # node_vars[(j, p)] == 1 iff node j is part of the route that connects pair p
+  # node_vars[j, p] == 1 iff node j is part of the route that connects pair p
   for j in nodes_iter():
     for p in pairs:
-      node_vars[(j, p)] = m.addVar(obj=0, vtype=GRB.BINARY)
+      node_vars[j, p] = m.addVar(obj=0, vtype=GRB.BINARY)
 
-  # term_vars[(x, y, z)] == 1 iff the terminal at (x, y) is to be connected at level z
+  # term_vars[x, y, z] == 1 iff the terminal at (x, y) is to be connected at level z
   for t in terminals:
     x, y = t
     for z in range(k):
-      term_vars[(x, y, z)] = m.addVar(obj=10, vtype=GRB.BINARY)
+      term_vars[x, y, z] = m.addVar(obj=10, vtype=GRB.BINARY)
 
   m.update()
 
@@ -75,43 +76,48 @@ def solve(n, pairs, k):
     x, y, z = j
     ws = list(adjacent_wires_iter(j))
     for p in pairs:
-      vars = [wire_vars[(i, p)] for i in ws]
+      vars = [wire_vars[i, p] for i in ws]
       if (x, y) in p:  # if the node is connected to a terminal, add 1 to edge count
         vars.append(term_vars[j])
-      m.addConstr(quicksum(vars) == 2 * node_vars[(j, p)])
-
-  for j in nodes_iter():
-    x, y, z = j
-    ws = list(adjacent_wires_iter(j))
-    vars = []
-    for p in pairs:
-      vars += [wire_vars[(i, p)] for i in ws]
-      if (x, y) in p:  # if the node is connected to a terminal, add 1 to edge count
-        vars.append(term_vars[j])
-    m.addConstr(quicksum(vars) == 2 * quicksum(node_vars[(j, p)] for p in pairs))
+      m.addConstr(quicksum(vars) == 2 * node_vars[j, p])
 
   # wires can only be used if their endpoints are used
   for i in wires_iter():
     for p in pairs:
       n1, n2 = i
-      m.addConstr(wire_vars[(i, p)] <= node_vars[(n1, p)])
-      m.addConstr(wire_vars[(i, p)] <= node_vars[(n2, p)])
-
-  # sum of adjacent wires of a node must be less than 2 if node is used
-  for j in nodes_iter():
-      for p in pairs:
-          adjacent_wires = [wire_vars[(i,p)] for i in adjacent_wires_iter(j)]
-          m.addConstr(quicksum(adjacent_wires) <= 2*node_vars[(j,p)])
+      m.addConstr(wire_vars[i, p] <= node_vars[n1, p])
+      m.addConstr(wire_vars[i, p] <= node_vars[n2, p])
 
   # every node must be part of either 0 or 1 routes
   for j in nodes_iter():
-    m.addConstr(quicksum([node_vars[(j, p)] for p in pairs]) <= 1)
+    m.addConstr(quicksum([node_vars[j, p] for p in pairs]) <= 1)
 
   # each terminal is connected at exactly 1 level
   for t in terminals:
     x, y = t
-    vars = [term_vars[(x, y, z)] for z in range(k)]
+    vars = [term_vars[x, y, z] for z in range(k)]
     m.addConstr(quicksum(vars) == 1)
+
+
+  def add_node_depth_constraints(visited_nodes, nodes, pair, depth):
+    if depth > 70: return
+    #print('depth', depth, 'nodes', len(nodes))
+    next_nodes = set()
+    for node in nodes:
+      next_nodes.update(*adjacent_wires_iter(node))
+    next_nodes.difference_update(nodes)
+    next_nodes.difference_update(visited_nodes)
+    vars = [node_vars[node, pair] for node in next_nodes]
+    m.addConstr(quicksum(vars) >= 1)
+    for node in next_nodes:
+      if node[0:2] in pair: # we stop if we reach the other endpoint (the constraints do not hold beyond this point)
+        return
+    visited_nodes.update(nodes)
+    add_node_depth_constraints(visited_nodes, next_nodes, pair, depth + 1)
+
+  for x, y in terminals:
+    nodes = {(x, y, z) for z in range(k)}
+    add_node_depth_constraints(set(), nodes, term_to_pair[x, y], 0)
 
   print('Solving...')
 
@@ -119,7 +125,7 @@ def solve(n, pairs, k):
   m.optimize()
 
   if m.status == GRB.status.OPTIMAL:
-    print('\nFound solution with total cost', m.objVal, 'using', k, 'layers')
+    print('\nFound solution with total cost', round(m.objVal), 'using', k, 'layers')
     if n <= 5:
       for wire, x in m.getAttr('x', wire_vars).items():
         if x > 0: print('Wire', wire, ':', x)
