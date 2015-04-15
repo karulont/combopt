@@ -71,7 +71,8 @@ def get_terminal_selected(t,k,vertices):
 # Add extra constraint in case of wrong paths
 def path_elim(m, where):
     if where == GRB.callback.MIPSOL:
-        print("Callback")
+        objVal = m.cbGet(GRB.callback.MIPSOL_OBJ)
+        print("Callback (objval=" + str(objVal) + ")")
 
         wire_sel = get_mip_solution_selected(m,m._vars)
         term_sel = get_mip_solution_selected(m,m._t_vars)
@@ -84,9 +85,7 @@ def path_elim(m, where):
             t1i = get_terminal_selected(t1,m._k,term_sel)
             t2i = get_terminal_selected(t2,m._k,term_sel)
             route = [t1i]
-            t = t1i
-            n = g.neighbors(t)
-            t=n[0]
+            t = g.neighbors(t1i)[0]
             while True:
                 route.append(t)
                 tn = g.neighbors(t)
@@ -98,21 +97,40 @@ def path_elim(m, where):
                     t = tn[0]
             
             if route[-1] != t2i:
-                #print("Wrong path!")
-                print("eliminate path of length " + str(len(route)))
+                print("Path {0}-{1} of length {2} removed".format(get_v(t1i), get_v(t2i), len(route)))
                 #for r in route:
                 #    print(get_v(r))
                 #print(get_v(t1i), get_v(t2i))
-                expr = m._t_vars[t1i]
+                expr = m._t_vars[t1i] + m._t_vars[t2i]
                 for i in range(len(route)-1):
                     expr += m._vars[(route[i], route[i+1])]
-                expr += m._t_vars[t2i]
                 m.cbLazy(expr <= len(route))
             else:
-                #print("path ok")
+                print("Path {0}-{1} of length {2} OK".format(get_v(t1i), get_v(t2i), len(route)))
+                #for r in route:
+                #    print(get_v(r))
+                #print(get_v(t1i), get_v(t2i))
                 pass
 
 def create_model(n,k):
+
+    def adjacent_wires_iter(wire_vars,x,y,z):
+        i = v_id(x,y,z)
+        if z < k - 1:
+            yield wire_vars[i, v_id(x,y,z+1)]
+        if z > 0:
+            yield wire_vars[v_id(x,y,z-1), i]
+        if z%2 == 0:
+            if x < n - 1:
+                yield wire_vars[i, v_id(x+1,y,z)]
+            if x > 0:
+                yield wire_vars[v_id(x-1,y,z), i]
+        else:
+            if y < n - 1:
+                yield wire_vars[i, v_id(x,y+1,z)]
+            if y > 0:
+                yield wire_vars[v_id(x,y-1,z), i]
+    
     print("Creating model")
     m = Model()
     wire_vars = {}
@@ -128,12 +146,15 @@ def create_model(n,k):
                 degs[i] = m.addVar(vtype=GRB.BINARY)
                 if z%2 == 0:
                     if x < n-1:
-                        wire_vars[v_id(x+1,y,z), i] = wire_vars[i, v_id(x+1,y,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                        i2 = v_id(x+1,y,z)
+                        wire_vars[i, i2] = wire_vars[i2,i] = m.addVar(obj=1, vtype=GRB.BINARY)
                 else:
                     if y < n-1:
-                        wire_vars[v_id(x,y+1,z), i] = wire_vars[i, v_id(x,y+1,z)] = m.addVar(obj=1, vtype=GRB.BINARY)
+                        i2 = v_id(x,y+1,z)
+                        wire_vars[i,i2] = wire_vars[i2,i] = m.addVar(obj=1, vtype=GRB.BINARY)
                 if z < k-1:
-                    wire_vars[v_id(x,y,z+1), i] = wire_vars[i, v_id(x,y,z+1)] = m.addVar(obj=10, vtype=GRB.BINARY)
+                    i2 = v_id(x,y,z+1)
+                    wire_vars[i,i2] = wire_vars[i2,i] = m.addVar(obj=10, vtype=GRB.BINARY)
 
     # Add diagonal wires between the terminal node and the k nodes that it might connect to
     print("Adding terminal vars")
@@ -156,34 +177,23 @@ def create_model(n,k):
     for x in range(n):
         for y in range(n):
             for z in range(k):
-                point_edges = []
-                i = v_id(x,y,z)
-                if z%2 == 0:
-                    if x < n-1:
-                        point_edges.append(wire_vars[i, v_id(x+1,y,z)])
-                    if x > 0:
-                        point_edges.append(wire_vars[v_id(x-1,y,z), i])
-                else:
-                    if y < n-1:
-                        point_edges.append(wire_vars[i, v_id(x,y+1,z)])
-                    if y > 0:
-                        point_edges.append(wire_vars[v_id(x,y-1,z), i])
-                if z < k-1:
-                    point_edges.append(wire_vars[i, v_id(x,y,z+1)])
-                if z > 0:
-                    point_edges.append(wire_vars[v_id(x,y,z-1), i])
+                point_edges = list(adjacent_wires_iter(wire_vars,x,y,z))
 
+                i = v_id(x,y,z)
                 if i in t_vars:
                     point_edges.append(t_vars[i])
 
-                m.addConstr(quicksum(point_edges) * 0.5, GRB.EQUAL, degs[i])
+                m.addConstr(quicksum(point_edges) == 2 * degs[i])
 
     # wires can only be used if their endpoints are used
     for p1,p2 in wire_vars:
         m.addConstr(wire_vars[p1,p2] <= degs[p1])
         m.addConstr(wire_vars[p1,p2] <= degs[p2])
 
-    
+    for i in t_vars:
+        m.addConstr(t_vars[i] <= degs[i])
+
+
     #horisontaalsed jooned eraldajateks
     for x1 in range(n-1):
         x2 = x1 + 1
@@ -194,19 +204,11 @@ def create_model(n,k):
                 i2 = v_id(x2,y,z)
                 if (i1, i2) in wire_vars:
                     col_vars.append(wire_vars[i1,i2])
-##        p_count=0
-##        for p in pairs:
-##            if (p[0][0] > x1 and p[1][0] < x2) or (p[0][0] < x2 and p[1][0] > x1):
-##                p_count += 1
-
-        p_count=0
+        p_count = 0
         for p in pairs:
-            center_x=(x1+ x1+1)/2
-            #joone valem: x-center_x=0
-            p1_side=sign(p[0][0]-center_x)
-            p2_side=sign(p[1][0]-center_x)
-            if p1_side!=p2_side:            
+           if (p[0][0] > x1 and p[1][0] < x2) or (p[0][0] < x2 and p[1][0] > x1):
                 p_count += 1
+
         m.addConstr(quicksum(col_vars) >= p_count)
 
     #vertikaalsed jooned eraldajateks
@@ -219,19 +221,11 @@ def create_model(n,k):
                 i2 = v_id(x,y2,z)
                 if (i1, i2) in wire_vars:
                     col_vars.append(wire_vars[i1,i2])
-##        p_count=0
-##        for p in pairs:
-##            if (p[0][1] > y1 and p[1][1] < y2) or (p[0][1] < y2 and p[1][1] > y1):
-##                p_count += 1
         p_count=0
         for p in pairs:
-            center_y=(y1+ y1+1)/2
-            #joone valem: y-center_y=0
-            p1_side=sign(p[0][1]-center_y)
-            p2_side=sign(p[1][1]-center_y)
-            if p1_side!=p2_side:            
+            if (p[0][1] > y1 and p[1][1] < y2) or (p[0][1] < y2 and p[1][1] > y1):
                 p_count += 1
-        print(p_count)
+
         m.addConstr(quicksum(col_vars) >= p_count)
 
     #suunaga alla diagonaalid(alumine pool)
@@ -341,7 +335,7 @@ def create_model(n,k):
             tous=1#kuna suunaga üles
             p_count += get_diag_cols_count(p[0],p[1],center_x, center_y, tous)
         m.addConstr(quicksum(diag_col_vars) >= p_count)
-        
+
 
     # Optimize model
     m._vars = wire_vars
@@ -443,4 +437,4 @@ with open(filename2, 'w') as f:
     json.dump( (k,s) ,  f)
 
 check_solution(filename1, filename2)
-draw.draw(n,s)
+#draw.draw(n,s)
