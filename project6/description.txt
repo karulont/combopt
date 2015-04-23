@@ -1,0 +1,50 @@
+In image recognition, one of the issues which appear is to decide the boundary of an object on the image.  (Imagine a robot trying to pick up a tool from a work bench with a robotic arm.  From the data it receives from the camera, it needs to decide what's object, and what's tool and what's work bench.)  Let's say that the object is the "foreground" of the image, and everything else is the "background".
+
+One of the steps in this process is the following.  Based on color values, to each pixel of the image, a probability has been assigned which indicates how likely it is that the pixel belongs to the foreground.  But the object has some kind of "compact" shape, e.g., it won't consist of all points with even coordinates, even if that maximizes the probability.  One way to model that is to say that the transition from foreground to background incurs a "cost": If two pixels (x,y) and (x',y') at distance d from each other, then that cost is proportional to 1/d^2.  (The distance here is the usual Euclidean distance: d = sqrt( (x'-x)^2 + (y'-y)^2 ).)   Let's say that the distance is equal to k/d^2, where k is a parameter which will be determined based on the type of image.  It is ok to round it down to 0 once that value drops below 1.
+
+There's a trade-off between maximizing the probabilities and the costs: If the costs are overwhelmingly important, then saying that the foreground is empty (object is not in the image) is always best possible.  If the probabilities are overwhelmingly important, the best solution is to take all pixels with foreground probability > 1/2, regardless of where they are on the image.  Hence, there are be parameters a,b which determine how the two are weighed.
+
+The following code determines the "deficiency" of a partition into foreground and background:
+
+from math import log
+
+def deficiency(m,n,P,F, k, a,b):
+   # It's an m by n pixel image
+   # P[x][y] is the foreground probability of pixel (x,y)
+   # F[x][y]==1 if pixel (x,y) belongs to the foreground, ==0 otherwise
+
+   p = 1 # probability that we got the foreground right
+   for x in range(m):
+      for y in range(n):
+         if F[x][y]==1:
+            p *= P[x][y]
+         else:
+            p *= 1-P[x][y]
+
+   c = 0 # cost
+   for x in range(m):
+      for y in range(n):
+         if F[x][y]==1:
+            for x' in range( max(0,x-k), min(m,x+k+1) ):
+              for y' in range( max(0,y-k), min(n,y+k+1) ):
+                 if F[x][y]==0:
+                    d2 = (x'-x)**2 + (y'-y)**2
+                    c += k/d2
+
+   return a*c + b*log(1/p)
+
+Write a code which, given m,n,P,k,a,b finds an F of minimal deficiency:
+
+
+def find_foreground(m,n,P,k,a,b):
+   ...
+   return F
+
+
+The contents of the data files is of the form
+
+[m,n,P]
+
+Try some value of k,a,b, e.g., each of them between 1 and 10.
+
+Fastest correct code wins.
