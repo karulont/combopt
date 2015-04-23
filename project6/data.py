@@ -14,7 +14,7 @@ def check_data(m,n,P):
 ####################################################################################################
 # I/O
 
-def write_instance_to_file(fn,P,):
+def write_instance_to_file(fn,P):
     with open(fn, 'w') as f:
         json.dump( (len(P),len(P[0]),P) ,  f)
 

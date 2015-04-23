@@ -1,7 +1,7 @@
 from data import *
 from math import log
 import networkx as nx
-
+import my_display
 
 def zeroFix(a):
     if a < 1.e-307:
@@ -63,3 +63,10 @@ F = find_foreground(m,n,P,k,a,b)
 
 df = deficiency(m,n,P,F,k,a,b)
 print("Deficiency: " + str(df))
+
+display=my_display.MyDisplay()
+display.save_to_file=True
+
+display.add_tab(P,"_P_")
+display.add_tab(F,"_F_")
+display.show()
