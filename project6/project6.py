@@ -1,13 +1,18 @@
 from data import *
+from math import log
 import networkx as nx
+
+
+def zeroFix(a):
+    if a < 1.e-307:
+        return (1.e+31)
+    else:
+        return (a)
 
 def find_foreground(m,n,P,k,a,b):
     g = nx.DiGraph()
 
-    sizeV = m*n
-    bprim = b / sizeV
-    aprim = a / sizeV
-    print ("aprim", aprim, "bprim", bprim)
+    print ("k", k, "a", a, "b", b)
 
     for x in range(m):
         for y in range(n):
@@ -17,24 +22,24 @@ def find_foreground(m,n,P,k,a,b):
                     if d2 == 0:
                         continue
                     c = k/d2
-                    print (x,y,c,c*aprim)
-                    g.add_edge((x,y), (x_,y_), capacity=c*aprim)
-                    g.add_edge((x_,y_), (x,y), capacity=c*aprim)
+                    g.add_edge((x,y), (x_,y_), capacity=c*a)
+                    g.add_edge((x_,y_), (x,y), capacity=c*a)
 
     g.add_node("s")
     g.add_node("t")
 
     for x in range(m):
         for y in range(n):
-            g.add_edge("s", (x,y), capacity=P[x][y] * bprim)
-            g.add_edge((x,y), "t", capacity=(1-P[x][y]) * bprim)
+            g.add_edge("s", (x,y), capacity=log(1/zeroFix(P[x][y])) * b)
+            g.add_edge((x,y), "t", capacity=log(1/zeroFix(1-P[x][y])) * b)
 
-    print(str(g.edges(data=True)))
+    #print(str(g.edges(data=True)))
 
     (value,partition) = nx.minimum_cut(g,"s","t")
     reachable, non_reachable = partition
     print("Non-reachable: " + str(non_reachable))
     print("Reachable: " + str(reachable))
+    print("Cut value: ", value)
 
     F=[[0 for i in range(n)] for j in range(m)]
 
@@ -44,15 +49,15 @@ def find_foreground(m,n,P,k,a,b):
 
     return F
 
-P = read_instance_from_file("v2_test-0.img")
+P = read_instance_from_file("v2_test-00.img")
 m = len(P)
 n = len(P[0])
 print("m: " + str(m))
 print("n: " + str(n))
 
-k = 2
-a = 0
-b = 1
+k = 7
+a = 3
+b = 2
 
 F = find_foreground(m,n,P,k,a,b)
 

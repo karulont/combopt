@@ -51,10 +51,12 @@ def deficiency(m,n,P,F, k, a,b):
                             d2 = (x_-x)**2 + (y_-y)**2
                             c += k/d2
     if p < 1.e-307:
-        print(p)
-        return a*c + b*1.e+31
+        bpart = b*1.e+31
     else:
-        return a*c + b*log(1/p)
+        bpart = b*log(1/p)
+    apart = a*c
+    print("apart",apart,"bpart",bpart)
+    return apart + bpart
 
 ####################################################################################################
 
