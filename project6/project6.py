@@ -1,9 +1,6 @@
 from data import *
 import networkx as nx
 
-def v_id(x,y,m):
-    return x*m+y
-    
 def find_foreground(m,n,P,k,a,b):
     g = nx.DiGraph()
 
@@ -11,21 +8,20 @@ def find_foreground(m,n,P,k,a,b):
         for y in range(m):
             for x_ in range( max(0,x-k), min(m,x+k+1) ):
                 for y_ in range(max(0,y-k), min(n,y+k+1)):
-                    #print((x,y,x_,y_))
                     d2 = (x_-x)**2 + (y_-y)**2
                     if d2 == 0:
                         continue
                     c = k/d2
-                    g.add_edge(v_id(x,y,m), v_id(x_,y_,m), capacity=1)
-                    g.add_edge(v_id(x_,y_,m), v_id(x,y,m), capacity=1)
+                    g.add_edge((x,y), (x_,y_), capacity=c)
+                    g.add_edge((x_,y_), (x,y), capacity=c)
 
     g.add_node("s")
     g.add_node("t")
 
     for x in range(m):
         for y in range(m):
-            g.add_edge("s", v_id(x,y,m), capacity=P[x][y] * b)
-            g.add_edge(v_id(x,y,m), "t", capacity=P[x][y] * b)
+            g.add_edge("s", (x,y), capacity=P[x][y] * b)
+            g.add_edge((x,y), "t", capacity=P[x][y] * b)
 
     (value,partition) = nx.minimum_cut(g,"s","t")
     reachable, non_reachable = partition
@@ -36,7 +32,7 @@ def find_foreground(m,n,P,k,a,b):
 
     for x in range(m):
         for y in range(m):
-            if v_id(x,y,m) in reachable:
+            if (x,y) in reachable:
                 F[x][y] = 1
 
     return F
@@ -54,4 +50,4 @@ b = 1
 F = find_foreground(m,n,P,k,a,b)
 
 df = deficiency(m,n,P,F,k,a,b)
-print(df)
+print("Deficiency: " + str(df))
