@@ -8,7 +8,7 @@ def zeroFix(a):
     if a < 1.e-307:
         return (1.e+31)
     else:
-        return (a)
+        return (1/a)
 
 def find_foreground(m,n,P,k,a,b):
     g = nx.DiGraph()
@@ -32,8 +32,10 @@ def find_foreground(m,n,P,k,a,b):
     print("Adding s-v and v-t edges...")
     for x in range(m):
         for y in range(n):
-            g.add_edge("s", (x,y), capacity=log(1/zeroFix(1-P[x][y])) * b)
-            g.add_edge((x,y), "t", capacity=log(1/zeroFix(P[x][y])) * b)
+            c1 = log(zeroFix(1-P[x][y])) * b
+            c2 = log(zeroFix(P[x][y])) * b
+            g.add_edge("s", (x,y), capacity=c1)
+            g.add_edge((x,y), "t", capacity=c2)
 
     #print(str(g.edges(data=True)))
 
