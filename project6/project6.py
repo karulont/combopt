@@ -2,6 +2,7 @@ from data import *
 from math import log
 import networkx as nx
 import my_display
+import sys
 
 def zeroFix(a):
     if a < 1.e-307:
@@ -14,20 +15,22 @@ def find_foreground(m,n,P,k,a,b):
 
     print ("k", k, "a", a, "b", b)
 
+    print("Creating graph...")
+    print("Adding v-v edges...")
     for x in range(m):
         for y in range(n):
             for x_ in range( max(0,x-k), min(m,x+k+1) ):
+                x2 = (x_-x)**2
                 for y_ in range(max(0,y-k), min(n,y+k+1)):
-                    d2 = (x_-x)**2 + (y_-y)**2
+                    y2 = (y_-y)**2
+                    d2 = x2 + y2
                     if d2 == 0:
                         continue
                     c = k/d2
                     g.add_edge((x,y), (x_,y_), capacity=c*a)
                     g.add_edge((x_,y_), (x,y), capacity=c*a)
 
-    g.add_node("s")
-    g.add_node("t")
-
+    print("Adding s-v and v-t edges...")
     for x in range(m):
         for y in range(n):
             g.add_edge("s", (x,y), capacity=log(1/zeroFix(P[x][y])) * b)
@@ -35,38 +38,51 @@ def find_foreground(m,n,P,k,a,b):
 
     #print(str(g.edges(data=True)))
 
-    (value,partition) = nx.minimum_cut(g,"s","t")
+    print("Finding minimum cut...")
+    value, partition = nx.minimum_cut(g,"s","t")
     reachable, non_reachable = partition
-    print("Non-reachable: " + str(non_reachable))
-    print("Reachable: " + str(reachable))
-    print("Cut value: ", value)
+    reachable.remove('s')
+    non_reachable.remove('t')
+
+    #print("Non-reachable: " + str(non_reachable))
+    #print("Reachable: " + str(reachable))
+    print("Non-reachable:", str(len(non_reachable)))
+    print("Reachable:", str(len(reachable)))
+    print("Cut value:", value)
 
     F=[[0 for i in range(n)] for j in range(m)]
-
-    reachable.remove('s')
     for (x,y) in reachable:
         F[x][y] = 1
 
     return F
 
-P = read_instance_from_file("v2_test-00.img")
-m = len(P)
-n = len(P[0])
-print("m: " + str(m))
-print("n: " + str(n))
+def main():
+    filename = "v2_test-00.img"
+    if len(sys.argv) == 2:
+        filename = sys.argv[1]
 
-k = 7
-a = 3
-b = 2
+    print("Reading", filename)
+    P = read_instance_from_file(filename)
+    m = len(P)
+    n = len(P[0])
+    print("m:", str(m))
+    print("n:", str(n))
 
-F = find_foreground(m,n,P,k,a,b)
+    k = 7
+    a = 3
+    b = 2
 
-df = deficiency(m,n,P,F,k,a,b)
-print("Deficiency: " + str(df))
+    F = find_foreground(m,n,P,k,a,b)
 
-display=my_display.MyDisplay()
-display.save_to_file=True
+    df = deficiency(m,n,P,F,k,a,b)
+    print("Deficiency: " + str(df))
 
-display.add_tab(P,"_P_")
-display.add_tab(F,"_F_")
-display.show()
+    display=my_display.MyDisplay()
+    display.save_to_file=True
+
+    display.add_tab(P,"_P_")
+    display.add_tab(F,"_F_")
+    display.show()
+
+if __name__ == '__main__':
+    main()

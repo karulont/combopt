@@ -10,9 +10,9 @@ def pic_to_pixel(picture,color):
 	pic = img.open(picture)
 	matrix = []
 	width,height = pic.size
-	for i in range(width):
+	for j in range(height):
 		row = []
-		for j in range(height):
+		for i in range(width):
 			pixel = pic.getpixel((i,j))
 			if pixel[color] == 0:
 				row.append(0)
