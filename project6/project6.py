@@ -26,9 +26,9 @@ def find_foreground(m,n,P,k,a,b):
                     d2 = x2 + y2
                     if d2 == 0:
                         continue
-                    c = k/d2
-                    g.add_edge((x,y), (x_,y_), capacity=c*a)
-                    g.add_edge((x_,y_), (x,y), capacity=c*a)
+                    cost = a * (k/d2)
+                    g.add_edge((x,y), (x_,y_), capacity=cost)
+                    g.add_edge((x_,y_), (x,y), capacity=cost)
 
     print("Adding s-v and v-t edges...")
     for x in range(m):
@@ -39,21 +39,24 @@ def find_foreground(m,n,P,k,a,b):
     #print(str(g.edges(data=True)))
 
     print("Finding minimum cut...")
-    value, partition = nx.minimum_cut(g,"s","t")
+    cut_value, partition = nx.minimum_cut(g,"s","t")
     reachable, non_reachable = partition
     reachable.remove('s')
     non_reachable.remove('t')
 
-    #print("Non-reachable: " + str(non_reachable))
-    #print("Reachable: " + str(reachable))
+    #print("Non-reachable:", str(non_reachable))
+    #print("Reachable:", str(reachable))
     print("Non-reachable:", str(len(non_reachable)))
     print("Reachable:", str(len(reachable)))
-    print("Cut value:", value)
+    print("Cut value:", cut_value)
 
-    F=[[0 for i in range(n)] for j in range(m)]
-    for (x,y) in reachable:
-        F[x][y] = 1
+    F=[[1 if (x,y) in reachable else 0
+        for i in range(n)] for j in range(m)]
+    return F
 
+def find_foreground_by_probability(m,n,P):
+    F = [[1 if P[x][y] > 0.5 else 0
+        for y in range(n)] for x in range(m)]
     return F
 
 def main():
@@ -73,9 +76,10 @@ def main():
     b = 2
 
     F = find_foreground(m,n,P,k,a,b)
+    #F = find_foreground_by_probability(m,n,P)
 
     df = deficiency(m,n,P,F,k,a,b)
-    print("Deficiency: " + str(df))
+    print("Deficiency:", str(df))
 
     display=my_display.MyDisplay()
     display.save_to_file=True
