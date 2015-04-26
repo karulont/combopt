@@ -28,13 +28,12 @@ def find_foreground(m,n,P,k,a,b):
                         continue
                     cost = a * (k/d2)
                     g.add_edge((x,y), (x_,y_), capacity=cost)
-                    g.add_edge((x_,y_), (x,y), capacity=cost)
 
     print("Adding s-v and v-t edges...")
     for x in range(m):
         for y in range(n):
-            g.add_edge("s", (x,y), capacity=log(1/zeroFix(P[x][y])) * b)
-            g.add_edge((x,y), "t", capacity=log(1/zeroFix(1-P[x][y])) * b)
+            g.add_edge("s", (x,y), capacity=log(1/zeroFix(1-P[x][y])) * b)
+            g.add_edge((x,y), "t", capacity=log(1/zeroFix(P[x][y])) * b)
 
     #print(str(g.edges(data=True)))
 
@@ -51,7 +50,7 @@ def find_foreground(m,n,P,k,a,b):
     print("Cut value:", cut_value)
 
     F=[[1 if (x,y) in reachable else 0
-        for i in range(n)] for j in range(m)]
+        for y in range(n)] for x in range(m)]
     return F
 
 def find_foreground_by_probability(m,n,P):
@@ -71,8 +70,8 @@ def main():
     print("m:", str(m))
     print("n:", str(n))
 
-    k = 7
-    a = 3
+    k = 2
+    a = 1
     b = 2
 
     F = find_foreground(m,n,P,k,a,b)
