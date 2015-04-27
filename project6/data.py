@@ -47,14 +47,12 @@ def deficiency(m,n,P,F, k, a,b):
             if F[x][y]==1:
                 for x_ in range( max(0,x-k), min(m,x+k+1) ):
                     for y_ in range( max(0,y-k), min(n,y+k+1) ):
-                        if F[x][y]==0:
+                        if F[x_][y_] == 0:
                             d2 = (x_-x)**2 + (y_-y)**2
                             c += k/d2
-    if p < 1.e-307:
-        bpart = b*1.e+31
-    else:
-        bpart = b*log(1/p)
+    print('p', p, 'c', c)
     apart = a*c
+    bpart = b * (log(1/p) if p > 0 else 1e309)
     print("apart",apart,"bpart",bpart)
     return apart + bpart
 
