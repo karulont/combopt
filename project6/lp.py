@@ -46,29 +46,18 @@ def find_foreground(m,n,P,k,a,b):
         for y in range(n):
             c1 = log(zeroFix(1-P[x][y])) * b
             c2 = log(zeroFix(P[x][y])) * b
-            edge_vars['s',(x,y)] = mo.addVar(obj=c1)
-            print(('s',(x,y)), c1)
-            edge_vars[(x,y),'t'] = mo.addVar(obj=c2)
-            print(((x,y),'t'), c2)
+            s_vars[(x,y)] = mo.addVar(obj=c1, name = "svar")
+            t_vars[(x,y)] = mo.addVar(obj=c2, name = "tvar")
 
     mo.update()
 
     print("Adding constraints...")
-    for (p,q) in edge_vars:
-        print(p,q)
-        summ = []
-        summ.append(edge_vars[p,q])
-        if p != 's' and p != 't':
-            summ.append(node_vars[p])
-        if q != 's' and q != 't':
-            summ.append(-node_vars[q])
-        coef = 0
-        if p != 's':
-            coef -= 1
-        if q != 's':
-            coef += 1
-        print(summ, coef)
-        mo.addConstr(quicksum(summ) >= coef)
+    for v in node_vars:
+        mo.addConstr(node_vars[v] + s_vars[v] >= 1)
+    for u,v in edge_vars:
+        mo.addConstr(node_vars[v] - node_vars[u] + edge_vars[u,v] >= 0)
+    for u in node_vars:
+        mo.addConstr(-node_vars[u] + t_vars[u] >= 0)
 
     print("Finding minimum cut...")
     mo.modelSense = GRB.MINIMIZE
@@ -108,8 +97,8 @@ def main():
     print("n:", str(n))
 
     k = 2
-    a = 0
-    b = 20
+    a = 1
+    b = 2
 
     F = find_foreground(m,n,P,k,a,b)
     #F = find_foreground_by_probability(m,n,P)
