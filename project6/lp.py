@@ -39,7 +39,6 @@ def find_foreground(m,n,P,k,a,b):
                     if ((x,y),(x_,y_)) in edge_vars:
                         print("Alert!")
                     edge_vars[(x,y),(x_,y_)] = mo.addVar(obj=cost)
-                    print(((x,y),(x_,y_)), cost)
 
     print("Adding s-v and v-t edges...")
     for x in range(m):
@@ -64,9 +63,6 @@ def find_foreground(m,n,P,k,a,b):
     mo.optimize()
 
     reachable = []
-    for var, x in mo.getAttr('x', edge_vars).items():
-        if x == 1:
-            print(var)
     for var, x in mo.getAttr('x', node_vars).items():
         if x == 1:
             reachable.append(var)
