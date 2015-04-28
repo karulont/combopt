@@ -31,16 +31,16 @@ def read_instance_from_file(fn):
 # cost computation
 
 def deficiency(m,n,P,F, k, a,b):
-    # It's an n by n pixel image
+    # It's an m by n pixel image
     # P[x][y] is the foreground probability of pixel (x,y)
-    # F[x][y]==1 if pixel (x,y) belonges to the foreground, ==0 otherwise
-    p = 1 # probability that we got the forground right
+    # F[x][y]==1 if pixel (x,y) belongs to the foreground, ==0 otherwise
+    logp = 0 # log of the reciprocal probability that we got the foreground right
     for x in range(m):
         for y in range(n):
             if F[x][y]==1:
-                p *= P[x][y]
+                logp -= log(P[x][y]) if P[x][y] > 0 else 1e309
             else:
-                p *= 1-P[x][y]
+                logp -= log(1 - P[x][y]) if P[x][y] < 1 else 1e309
     c = 0 # cost
     for x in range(m):
         for y in range(n):
@@ -50,9 +50,8 @@ def deficiency(m,n,P,F, k, a,b):
                         if F[x_][y_] == 0:
                             d2 = (x_-x)**2 + (y_-y)**2
                             c += k/d2
-    print('p', p, 'c', c)
     apart = a*c
-    bpart = b * (log(1/p) if p > 0 else 1e309)
+    bpart = b * logp
     print("apart",apart,"bpart",bpart)
     return apart + bpart
 
