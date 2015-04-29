@@ -22,7 +22,7 @@ def find_foreground(m,n,P,k,a,b):
     t_vars = {}
     for x in range(m):
         for y in range(n):
-            node_vars[x,y] = mo.addVar(obj = 0, name = str((x,y)))
+            node_vars[x,y] = mo.addVar(ub = 1, obj = 0, name = str((x,y)))
 
     print("Creating graph...")
     print("Adding v-v edges...")
@@ -38,15 +38,15 @@ def find_foreground(m,n,P,k,a,b):
                     cost = a * (k/d2)
                     if ((x,y),(x_,y_)) in edge_vars:
                         print("Alert!")
-                    edge_vars[(x,y),(x_,y_)] = mo.addVar(obj=cost)
+                    edge_vars[(x,y),(x_,y_)] = mo.addVar(ub = 1, obj=cost)
 
     print("Adding s-v and v-t edges...")
     for x in range(m):
         for y in range(n):
             c1 = log(zeroFix(1-P[x][y])) * b
             c2 = log(zeroFix(P[x][y])) * b
-            s_vars[(x,y)] = mo.addVar(obj=c1, name = "svar")
-            t_vars[(x,y)] = mo.addVar(obj=c2, name = "tvar")
+            s_vars[(x,y)] = mo.addVar(ub = 1, obj=c1, name = "svar")
+            t_vars[(x,y)] = mo.addVar(ub = 1, obj=c2, name = "tvar")
 
     mo.update()
 
