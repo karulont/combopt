@@ -11,6 +11,12 @@ def read_lst(fn):
 def distance(v1, v2):
     return math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2)
 
+def distance_squared(v1, v2):
+    return (v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2
+
+#def get_permutation(edges):
+    
+
 def main():
     fn = 'data-n2-t3.json'
     if len(argv) == 2:
@@ -34,7 +40,7 @@ def main():
             point_edges[f,v1] = []
             for j in range(n):
                 v2 = tuple(f2[j])
-                cost = distance(v1,v2)
+                cost = distance_squared(v1,v2)
                 edge_vars[f,v1,v2] = m.addVar(obj=cost, vtype=GRB.BINARY)
                 frame_edges[f].append(edge_vars[f,v1,v2])
                 point_edges[f,v1].append(edge_vars[f,v1,v2])
@@ -43,8 +49,8 @@ def main():
     print("Adding constraints...")
 
     # There must be n edges from one frame to the next
-    for f in range(len(frames)-1):
-        m.addConstr(quicksum(frame_edges[f]) == n)
+    #for f in range(len(frames)-1):
+    #    m.addConstr(quicksum(frame_edges[f]) == n)
 
     # There must be one outgoing edge per point in the first n-1 frames
     for edges in point_edges:
@@ -54,11 +60,21 @@ def main():
 
     if m.status == GRB.status.OPTIMAL:
         edges = m.getAttr('x', edge_vars).items()
-        cost = 0
+        cost = {}
         for edge,selected in edges:
             if selected:
-                cost += distance(edge[1],edge[2])
+                f,v1,v2 = edge
+                if f in cost:
+                    cost[f] += distance(v1,v2)
+                else:
+                    cost[f] = distance(v1,v2)
         print("cost:", cost)
 
+        #get_permutation()
+
 if __name__ == '__main__':
+    import time
+    start = time.clock()
     main()
+    end = time.clock()
+    print("time: {0:.3f} s".format(end - start))
