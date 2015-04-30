@@ -2,12 +2,13 @@ import kdtree
 import json
 import networkx as nx
 from sys import argv
+from munkres import Munkres
 
 def dist(u, v):
   d = 0
   for i in range(0, len(u)):
     d += (u[i] - v[i]) ** 2
-    return d
+  return d
 
 def solve(snapshots):
   times = [t[0] for t in snapshots]
@@ -40,32 +41,20 @@ def solve(snapshots):
 
   print(perm2)
 
-def solveForTwo(sn1, sn2):
-  g = nx.DiGraph()
+def solveForTwo(snap1, snap2):
+  m = Munkres()
 
-  for u in sn1:
-    for v in sn2:
-      g.add_edge((u, '-'), (v, '+'), weight=dist(u, v), capacity=1)
+  costs = []
+  for u in snap1:
+    c = []
+    for v in snap2:
+      c.append(dist(u, v))
+    costs.append(c)
 
-  for u in sn1:
-    g.node[u, '-']['demand'] = -1
-
-  for u in sn2:
-    g.node[u, '+']['demand'] = 1
-
-  mcf = nx.min_cost_flow(g)
-
+  indexes = m.compute(costs)
   perm = {}
-  for u in sn1:
-    flows = mcf[u, '-']
-    for (v, _), f in flows.items():
-      if f > 0:
-        perm[u] = v
-        break
-
-  print('Connections between snapshots')
-  print(perm)
-  print('Distance sum:', sum([dist(u, v) for u, v in perm.items()]))
+  for i, j in indexes:
+    perm[snap1[i]] = snap2[j]
 
   return perm
 
@@ -74,7 +63,7 @@ def read_instance_from_file(file):
   with open(file) as f:
     n, snapshots = json.load(f)
     #snapshots.sort(key = lambda ss: ss[0])
-    return [(ss[0],[tuple(u) for u in ss[1:]]) for ss in snapshots]
+    return [(ss[0],[tuple(u) for u in ss[1]]) for ss in snapshots]
 
 
 def write_output(file, solution):
