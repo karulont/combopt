@@ -12,13 +12,14 @@ def distance(v1, v2):
     return math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2)
 
 def main():
-    #n,frames = read_lst('example-points.lst')
-    n,frames = read_lst('data-n2-t3.json')
+    fn = 'data-n2-t3.json'
+    if argv == 2:
+        fn = argv[0]
+    n,frames = read_lst(fn)
     print("n:", n)
     print("frames: t0-t" + str(len(frames)-1))
 
     edge_vars = {}
-
     m = Model('project7')
 
     print("Adding variables...")
@@ -47,7 +48,6 @@ def main():
 
     # There must be one outgoing edge per point in the first n-1 frames
     for edges in point_edges:
-        print(point_edges[edges])
         m.addConstr(quicksum(point_edges[edges]) == 1)
 
     m.optimize()
@@ -57,9 +57,7 @@ def main():
         cost = 0
         for edge,selected in edges:
             if selected:
-                f,v1,v2 = edge
-                cost += distance(v1,v2)
-                #print(edge)
+                cost += distance(edge[1],edge[2])
         print("cost:", cost)
 
 if __name__ == '__main__':
