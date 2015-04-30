@@ -8,20 +8,23 @@ def read_lst(fn):
         (n,tp) = json.load(f)
     return (n,tp)
 
+def write_lst(fn, lst):
+    with open(fn, 'w') as f:
+        json.dump(lst, f)
+
 def distance(v1, v2):
     return math.sqrt((v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2)
 
 def distance_squared(v1, v2):
     return (v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2
 
-def get_permutation(edges, frame1, frame2, n, i):
-    perm = []
-    for v1 in frame1:
-        v1 = tuple(v1)
-        for edge,selected in edges:
-            if selected and edge[0] == i and edge[1] == v1:
-                v2 = list(edge[2])
-                perm.append(frame2.index(v2))
+def get_permutation(edges, last_perm, last_frame, frame, n):
+    perm = [0]*n
+    for v1,v2 in edges:
+        v1i = last_frame.index(list(v1))
+        v2i = frame.index(list(v2))
+        j = last_perm[v1i]
+        perm[j] = v2i
     return perm
 
 def main():
@@ -29,62 +32,63 @@ def main():
     if len(argv) == 2:
         fn = argv[1]
     n,frames = read_lst(fn)
+    nf = len(frames)-1
     print("n:", n)
-    print("frames: t0-t" + str(len(frames)-1))
+    print("frames: t0-t" + str(nf))
 
-    edge_vars = {}
     m = Model('project7')
 
     print("Adding variables...")
-    frame_edges = {}
-    point_edges = {}
-    for f in range(len(frames)-1):
+    edge_vars = [{} for i in range(nf)]
+    point_edges = [{} for i in range(nf)]
+    for f in range(nf):
         t1,f1 = frames[f]
         t2,f2 = frames[f+1]
-        frame_edges[f] = []
         for i in range(n):
             v1 = tuple(f1[i])
-            point_edges[f,v1] = []
+            point_edges[f][v1] = []
             for j in range(n):
                 v2 = tuple(f2[j])
                 cost = distance_squared(v1,v2)
-                edge_vars[f,v1,v2] = m.addVar(obj=cost, vtype=GRB.BINARY)
-                frame_edges[f].append(edge_vars[f,v1,v2])
-                point_edges[f,v1].append(edge_vars[f,v1,v2])
+                edge_vars[f][v1,v2] = m.addVar(obj=cost, vtype=GRB.BINARY)
+                point_edges[f][v1].append(edge_vars[f][v1,v2])
     m.update()
 
     print("Adding constraints...")
 
     # There must be n edges from one frame to the next
-    #for f in range(len(frames)-1):
-    #    m.addConstr(quicksum(frame_edges[f]) == n)
+    #for frame in edge_vars:
+    #    m.addConstr(quicksum(frame.values()) == n)
 
     # There must be one outgoing edge per point in the first n-1 frames
-    for edges in point_edges:
-        m.addConstr(quicksum(point_edges[edges]) == 1)
+    for frame in point_edges:
+        for edges in frame:
+            m.addConstr(quicksum(frame[edges]) == 1)
 
     m.optimize()
 
     if m.status == GRB.status.OPTIMAL:
-        edges = m.getAttr('x', edge_vars).items()
-
-        # Calculate cost
-        cost = {}
-        for edge,selected in edges:
-            if selected:
-                f,v1,v2 = edge
-                if f in cost:
-                    cost[f] += distance(v1,v2)
-                else:
-                    cost[f] = distance(v1,v2)
-        print("cost:", cost)
-
-        # Add frame permutation to solution
         solution = [n]
-        for i in range(len(frames)-1):
-            p = get_permutation(edges, frames[i][1], frames[i+1][1], n, i)
-            solution.append(p)
+        last_perm = [i for i in range(n)]
+
+        for f in range(nf):
+            edges = m.getAttr('x', edge_vars[f]).items()
+            selected = []
+            for edge,value in edges:
+                if value:
+                    selected.append(edge)
+
+            # Calculate cost
+            cost = 0
+            for v1,v2 in selected:
+                cost += distance(v1,v2)
+            print("cost", f, ":", cost)
+
+            # Add frame permutation to solution
+            last_perm = get_permutation(selected, last_perm, frames[f][1], frames[f+1][1], n)
+            solution.append(last_perm)
         print(solution)
+        write_lst(fn+'.sol',solution)
 
 if __name__ == '__main__':
     import time
