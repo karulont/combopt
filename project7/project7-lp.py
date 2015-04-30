@@ -14,8 +14,15 @@ def distance(v1, v2):
 def distance_squared(v1, v2):
     return (v2[0]-v1[0])**2 + (v2[1]-v1[1])**2 + (v2[2]-v1[2])**2
 
-#def get_permutation(edges):
-    
+def get_permutation(edges, frame1, frame2, n, i):
+    perm = []
+    for v1 in frame1:
+        v1 = tuple(v1)
+        for edge,selected in edges:
+            if selected and edge[0] == i and edge[1] == v1:
+                v2 = list(edge[2])
+                perm.append(frame2.index(v2))
+    return perm
 
 def main():
     fn = 'data-n2-t3.json'
@@ -60,6 +67,8 @@ def main():
 
     if m.status == GRB.status.OPTIMAL:
         edges = m.getAttr('x', edge_vars).items()
+
+        # Calculate cost
         cost = {}
         for edge,selected in edges:
             if selected:
@@ -70,7 +79,12 @@ def main():
                     cost[f] = distance(v1,v2)
         print("cost:", cost)
 
-        #get_permutation()
+        # Add frame permutation to solution
+        solution = [n]
+        for i in range(len(frames)-1):
+            p = get_permutation(edges, frames[i][1], frames[i+1][1], n, i)
+            solution.append(p)
+        print(solution)
 
 if __name__ == '__main__':
     import time
