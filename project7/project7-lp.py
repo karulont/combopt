@@ -13,8 +13,8 @@ def distance(v1, v2):
 
 def main():
     fn = 'data-n2-t3.json'
-    if argv == 2:
-        fn = argv[0]
+    if len(argv) == 2:
+        fn = argv[1]
     n,frames = read_lst(fn)
     print("n:", n)
     print("frames: t0-t" + str(len(frames)-1))
