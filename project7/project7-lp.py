@@ -23,7 +23,7 @@ def get_permutation(edges, last_perm, last_frame, frame, n):
     for v1,v2 in edges:
         v1i = last_frame.index(list(v1))
         v2i = frame.index(list(v2))
-        j = last_perm[v1i]
+        j = last_perm.index(v1i)
         perm[j] = v2i
     return perm
 
@@ -55,11 +55,21 @@ def main():
     m.update()
 
     print("Adding constraints...")
-
+    '''
     # There must be n edges from one frame to the next
-    #for frame in edge_vars:
-    #    m.addConstr(quicksum(frame.values()) == n)
+    for frame in edge_vars:
+        m.addConstr(quicksum(frame.values()) == n)
 
+    # There must be one incoming edge per point in the last n-1 frames
+    for f in range(nf):
+        for v2 in frames[f+1][1]:
+            v2 = tuple(v2)
+            v2_edges = []
+            for v1 in frames[f][1]:
+                v1 = tuple(v1)
+                v2_edges.append(edge_vars[f][v1,v2])
+            m.addConstr(quicksum(v2_edges) == 1)
+    '''
     # There must be one outgoing edge per point in the first n-1 frames
     for frame in point_edges:
         for edges in frame:
@@ -87,7 +97,7 @@ def main():
             # Add frame permutation to solution
             last_perm = get_permutation(selected, last_perm, frames[f][1], frames[f+1][1], n)
             solution.append(last_perm)
-        print(solution)
+        #print(solution)
         write_lst(fn+'.sol',solution)
 
 if __name__ == '__main__':
