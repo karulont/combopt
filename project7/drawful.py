@@ -5,6 +5,21 @@ import project7
 COL_RANGE = 16 ** 6  # as hex and RRGGBB
 
 
+def drawWithIndices(origPoints, pi1, pi2):
+    pointSnapshots = [origPoints[0]]
+
+    pi1_out = []
+    for i in pi1:
+        pi1_out += [origPoints[1][i]]
+    pointSnapshots.append(pi1_out)
+
+    pi2_out = []
+    for i in pi2:
+        pi2_out += [origPoints[2][i]]
+    pointSnapshots.append(pi2_out)
+    draw(pointSnapshots)
+
+
 def draw(pointSnapshots):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
