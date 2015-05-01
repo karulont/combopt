@@ -37,7 +37,7 @@ def get_permutation(edges, last_perm, last_frame, frame, n):
 def main():
     # fn = 'data-n2-t3.json'
     # fn = 'example-points.lst'
-    fn = 'points-00100-0.lst'
+    fn = 'points-00125-0.lst'
     if len(argv) == 2:
         fn = argv[1]
     n, frames = read_lst(fn)
@@ -62,6 +62,9 @@ def main():
             for j in range(n):
                 v2 = tuple(f2[j])
                 cost = distance_squared(v1, v2)
+                #if (v1, v2) in edge_vars[f]:
+                #    print("Duplicate vertex!")
+                #    return
                 edge_vars[f][v1, v2] = m.addVar(obj=cost, vtype=GRB.BINARY)
                 point_edges[f][v1].append(edge_vars[f][v1, v2])
     m.update()
@@ -71,7 +74,7 @@ def main():
     # There must be n edges from one frame to the next
     for frame in edge_vars:
         m.addConstr(quicksum(frame.values()) == n)
-
+    '''
     # There must be one incoming edge per point in the last n-1 frames
     for f in range(nf):
         for v2 in frames[f+1][1]:
@@ -81,7 +84,7 @@ def main():
                 v1 = tuple(v1)
                 v2_edges.append(edge_vars[f][v1,v2])
             m.addConstr(quicksum(v2_edges) == 1)
-    '''
+
     # There must be one outgoing edge per point in the first n-1 frames
     for frame in point_edges:
         for edges in frame:
