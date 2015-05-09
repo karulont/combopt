@@ -8,14 +8,15 @@ COL_RANGE = 16 ** 6  # as hex and RRGGBB
 def drawWithIndices(origPoints, pi1, pi2):
     pointSnapshots = [origPoints[0]]
 
-    pi1_out = []
-    for i in pi1:
-        pi1_out += [origPoints[1][i]]
+    pi1_out = [0]*len(pi1)
+    for i in range(len(pi1)):
+        pi1_out[pi1[i]] = origPoints[1][i]
     pointSnapshots.append(pi1_out)
 
-    pi2_out = []
-    for i in pi2:
-        pi2_out += [origPoints[2][i]]
+    pi2_out = [0]*len(pi2)
+    for i in range(len(pi2)):
+        # pi2_out += [origPoints[2][i]]
+        pi2_out[pi2[i]] = origPoints[2][i]
     pointSnapshots.append(pi2_out)
     draw(pointSnapshots)
 

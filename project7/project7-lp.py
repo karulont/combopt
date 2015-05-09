@@ -29,10 +29,9 @@ def get_permutation(edges, last_perm, last_frame, frame, n):
     for v1, v2 in edges:
         v1i = last_frame.index(list(v1))
         v2i = frame.index(list(v2))
-        j = last_perm.index(v1i)
-        perm[j] = v2i
+        # j = last_perm.index(v1i)
+        perm[v2i] = last_perm[v1i]
     return perm
-
 
 def main():
     # fn = 'data-n2-t3.json'
@@ -114,7 +113,7 @@ def main():
             solution.append(last_perm)
         # print(solution)
         write_lst(fn + '.sol', solution)
-        drawful.drawWithIndices(orig_frames, solution[1], solution[2])
+        # drawful.drawWithIndices(orig_frames, solution[1], solution[2])
 
 
 if __name__ == '__main__':

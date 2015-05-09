@@ -29,8 +29,8 @@ def get_permutation(edges, last_perm, last_frame, frame, n):
     for v1, v2 in edges:
         v1i = last_frame.index(list(v1))
         v2i = frame.index(list(v2))
-        j = last_perm.index(v1i)
-        perm[j] = v2i
+        # j = last_perm.index(v1i)
+        perm[v2i] = last_perm[v1i]
     return perm
 
 
@@ -49,7 +49,7 @@ def main():
             for j in range(n):
                 v2 = tuple(f2[j])
                 cost = distance_squared(v1, v2)
-                #if (v1, v2) in edge_vars[f]:
+                # if (v1, v2) in edge_vars[f]:
                 #    print("Duplicate vertex!")
                 #    return
                 edge_vars[v1, v2] = m.addVar(obj=cost, vtype=GRB.BINARY)
@@ -63,12 +63,12 @@ def main():
             m.addConstr(quicksum(frame.values()) == n)
         '''
         # There must be one incoming edge per point in the last n-1 frames
-        for v2 in frames[f+1][1]:
+        for v2 in frames[f + 1][1]:
             v2 = tuple(v2)
             v2_edges = []
             for v1 in frames[f][1]:
                 v1 = tuple(v1)
-                v2_edges.append(edge_vars[v1,v2])
+                v2_edges.append(edge_vars[v1, v2])
             m.addConstr(quicksum(v2_edges) == 1)
 
         # There must be one outgoing edge per point in the first n-1 frames
@@ -90,11 +90,16 @@ def main():
         print("cost", f, ":", cost)
 
         return get_permutation(selected, last_perm, frames[f][1], frames[f + 1][1], n)
-    
-    
+
+
     # fn = 'data-n2-t3.json'
     # fn = 'example-points.lst'
-    fn = 'points-00100-0.lst'
+    # fn = 'points-00125-0.lst'
+    # fn = 'points-10400-0.lst'
+    # fn = 'points-00125-0.lst'
+    # fn = 'new/points-00020-0.lst'
+    # fn = 'points-02500-0.lst'
+    fn = 'points_v-209-0.3.lst'
     if len(argv) == 2:
         fn = argv[1]
     n, frames = read_lst(fn)
@@ -114,13 +119,16 @@ def main():
 
     # print(solution)
     write_lst(fn + '.sol', solution)
-    drawful.drawWithIndices(orig_frames, solution[1], solution[2])
+
+    return (orig_frames, solution[1], solution[2])
 
 
 if __name__ == '__main__':
     import time
 
     start = time.clock()
-    main()
+    (orig_frames, solution1, solution2) = main()
     end = time.clock()
+
     print("time: {0:.3f} s".format(end - start))
+    drawful.drawWithIndices(orig_frames, solution1, solution2)
