@@ -1,0 +1,26 @@
+# I01.grp
+# GRPLIB   a collection of  Rural Postman Problem  instances (aka General Routing Problem)
+
+# graph:  n 	m
+11 	13
+# degree list:
+2 2 3 3 4 2 2 2 1 3 2
+# edge list:
+0-1 0-9 1-2     2-3 2-4 3-4     3-7 4-5 4-10 5-6 6-7 8-9 9-10
+# end of graph
+
+# edge costs
+3 5 10 6 1 1 4 2 22 9 8 1 4
+
+# edge required yes=1, no=0
+1 0 0 1 1 0 0 1 0 0 1 1 1
+
+# R-degree of node (# of incident required edges)
+1 1 2 1 2 1 1 1 1 2 1
+
+# R-set idx of node
+0 0 1 1 1 1 2 2 3 3 3
+
+# edge indices of a minimum spanning tree in G/E_R
+6 2 1
+# END
